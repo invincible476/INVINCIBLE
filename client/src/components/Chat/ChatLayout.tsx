@@ -23,23 +23,21 @@ export const ChatLayout = () => {
     await signOut();
   };
 
-  // Check if user has any conversations or contacts to show demo setup
-  const { data: conversations = [] } = useQuery({
+  // Check if user has any conversations or contacts
+  const { data: conversations = [], isLoading: conversationsLoading } = useQuery({
     queryKey: ['/api/conversations'],
     enabled: !!user,
+    refetchInterval: 2000, // Refresh every 2 seconds to show new data
   });
 
-  const { data: contacts = [] } = useQuery({
+  const { data: contacts = [], isLoading: contactsLoading } = useQuery({
     queryKey: ['/api/contacts'],
     enabled: !!user,
+    refetchInterval: 2000, // Refresh every 2 seconds to show new data
   });
 
   const hasData = conversations.length > 0 || contacts.length > 0;
-
-  // Show the demo setup first for new users, but allow skipping
-  if (!hasData && !showDemo) {
-    return <DemoSetup />;
-  }
+  const isLoading = conversationsLoading || contactsLoading;
 
   // If no conversations selected but we have the interface showing, 
   // show a welcome message in the main area
