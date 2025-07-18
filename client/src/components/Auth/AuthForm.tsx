@@ -36,14 +36,14 @@ export const AuthForm = () => {
         description: error.message,
         variant: 'destructive',
       });
+      setIsLoading(false);
     } else {
       toast({
         title: 'Welcome back!',
         description: 'You have been signed in successfully.',
       });
+      // Don't set loading to false here - let the auth state change handle the redirect
     }
-
-    setIsLoading(false);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {

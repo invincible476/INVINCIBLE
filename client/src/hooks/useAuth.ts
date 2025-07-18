@@ -63,12 +63,20 @@ export const useAuth = () => {
         body: JSON.stringify({ email, password }),
       });
       
+      // Force immediate state update
       setUser(response.user);
+      setLoading(false);
       
-      // Small delay to ensure session is properly set
+      // Force a re-check to get profile data
       setTimeout(async () => {
-        await checkAuthStatus();
-      }, 100);
+        try {
+          const authResponse = await apiRequest('/api/auth/me');
+          setUser(authResponse.user);
+          setProfile(authResponse.profile);
+        } catch (error) {
+          console.error('Post-signin auth check failed:', error);
+        }
+      }, 200);
       
       return { data: response, error: null };
     } catch (error: any) {

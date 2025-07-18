@@ -1,9 +1,14 @@
 import { useAuth } from '@/hooks/useAuth';
 import { AuthForm } from '@/components/Auth/AuthForm';
 import { ChatLayout } from '@/components/Chat/ChatLayout';
+import { useEffect } from 'react';
 
 const Index = () => {
   const { user, loading } = useAuth();
+
+  useEffect(() => {
+    console.log('Index component state:', { user: !!user, loading });
+  }, [user, loading]);
 
   if (loading) {
     return (
