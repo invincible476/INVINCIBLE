@@ -20,7 +20,7 @@ declare module "express-session" {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Session configuration
   app.use(session({
-    secret: process.env.SESSION_SECRET || 'dev-secret-key',
+    secret: process.env.SESSION_SECRET || 'dev-secret-key-for-replit-chat-app',
     resave: false,
     saveUninitialized: false,
     store: new MemoryStoreSession({
@@ -30,7 +30,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       secure: false, // set to true in production with HTTPS
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: 'lax', // Better for development
     },
+    name: 'sessionId', // Custom session name
   }));
 
   // Auth middleware
