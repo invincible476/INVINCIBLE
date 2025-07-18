@@ -1,13 +1,21 @@
 import { useAuth } from '@/hooks/useAuth';
 import { AuthForm } from '@/components/Auth/AuthForm';
 import { ChatLayout } from '@/components/Chat/ChatLayout';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const Index = () => {
   const { user, loading } = useAuth();
+  const [showAuth, setShowAuth] = useState(true);
 
   useEffect(() => {
-    console.log('Index component state:', { user: !!user, loading });
+    console.log('Index component state:', { user: !!user, loading, userObject: user });
+    if (user && !loading) {
+      console.log('Setting showAuth to false - should show chat interface');
+      setShowAuth(false);
+    } else if (!user && !loading) {
+      console.log('Setting showAuth to true - should show auth form');
+      setShowAuth(true);
+    }
   }, [user, loading]);
 
   if (loading) {
@@ -21,7 +29,7 @@ const Index = () => {
     );
   }
 
-  if (!user) {
+  if (showAuth || !user) {
     return <AuthForm />;
   }
 

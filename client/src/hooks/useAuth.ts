@@ -58,28 +58,31 @@ export const useAuth = () => {
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('Starting signin...');
       const response = await apiRequest('/api/auth/signin', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
       
-      // Force immediate state update
+      console.log('Signin response received:', response);
+      
+      // Immediately set user state
       setUser(response.user);
       setLoading(false);
       
-      // Force a re-check to get profile data
-      setTimeout(async () => {
-        try {
-          const authResponse = await apiRequest('/api/auth/me');
-          setUser(authResponse.user);
-          setProfile(authResponse.profile);
-        } catch (error) {
-          console.error('Post-signin auth check failed:', error);
-        }
-      }, 200);
+      // Also immediately fetch full auth data
+      try {
+        const authResponse = await apiRequest('/api/auth/me');
+        console.log('Auth me response:', authResponse);
+        setUser(authResponse.user);
+        setProfile(authResponse.profile);
+      } catch (error) {
+        console.error('Post-signin auth check failed:', error);
+      }
       
       return { data: response, error: null };
     } catch (error: any) {
+      console.error('Signin failed:', error);
       return { data: null, error: { message: error.message } };
     }
   };
