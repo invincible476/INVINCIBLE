@@ -12,43 +12,62 @@ export const DemoSetup = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const [skipDemo, setSkipDemo] = useState(false);
+
   const createDemoMutation = useMutation({
     mutationFn: async () => {
-      // Create a demo conversation that user can start using immediately
-      const conversation = await apiRequest('/api/conversations', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: 'Welcome Chat',
-          isGroup: false,
-        }),
-      });
-      
-      // Send a welcome message to the conversation
-      await apiRequest(`/api/conversations/${conversation.id}/messages`, {
-        method: 'POST',
-        body: JSON.stringify({
-          content: 'Welcome to Chat Rescuer! 🎉 Your migration from Supabase to Replit is complete. You can now start chatting, adding contacts, and creating conversations.',
-        }),
-      });
-      
-      return conversation;
+      try {
+        // Create a demo conversation that user can start using immediately
+        const conversation = await apiRequest('/api/conversations', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: 'Welcome Chat',
+            isGroup: false,
+          }),
+        });
+        
+        // Send a welcome message to the conversation
+        await apiRequest(`/api/conversations/${conversation.id}/messages`, {
+          method: 'POST',
+          body: JSON.stringify({
+            content: 'Welcome to Chat Rescuer! Your migration from Supabase to Replit is complete. You can now start chatting, adding contacts, and creating conversations.',
+          }),
+        });
+        
+        return conversation;
+      } catch (error) {
+        console.error('Demo creation error:', error);
+        // If demo creation fails, just skip to the main interface
+        setSkipDemo(true);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
       queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
       toast({
-        title: 'Welcome! 🎉',
+        title: 'Welcome!',
         description: 'Your chat environment is ready. Start messaging now!',
       });
     },
     onError: (error: any) => {
+      console.error('Setup error:', error);
       toast({
-        title: 'Setup failed',
-        description: error.message || 'Could not set up your chat environment',
-        variant: 'destructive',
+        title: 'Skipping to chat interface',
+        description: 'You can create conversations manually from the chat interface.',
       });
+      // Skip demo and go directly to chat interface
+      setSkipDemo(true);
     },
   });
+
+  // If user wants to skip demo or demo failed, show main interface
+  if (skipDemo) {
+    // Force showing the main chat interface by updating parent component
+    setTimeout(() => {
+      queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
+    }, 100);
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -88,26 +107,36 @@ export const DemoSetup = () => {
           </div>
 
           <div className="text-center space-y-4">
-            <Button
-              onClick={() => createDemoMutation.mutate()}
-              disabled={createDemoMutation.isPending}
-              size="lg"
-              className="px-8"
-            >
-              {createDemoMutation.isPending ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                  Creating Demo Data...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Set Up Chat Environment
-                </>
-              )}
-            </Button>
+            <div className="flex gap-4 justify-center">
+              <Button
+                onClick={() => createDemoMutation.mutate()}
+                disabled={createDemoMutation.isPending}
+                size="lg"
+                className="px-8"
+              >
+                {createDemoMutation.isPending ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                    Setting up...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Set Up Chat Environment
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={() => setSkipDemo(true)}
+                variant="outline"
+                size="lg"
+                className="px-8"
+              >
+                Skip to Chat Interface
+              </Button>
+            </div>
             <p className="text-sm text-muted-foreground">
-              This will create your first conversation so you can start chatting immediately
+              Set up a welcome conversation or skip directly to the chat interface
             </p>
           </div>
         </CardContent>

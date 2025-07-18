@@ -35,10 +35,14 @@ export const ChatLayout = () => {
 
   const hasData = conversations.length > 0 || contacts.length > 0;
 
-  // Always show the demo setup first for new users
-  if (!hasData) {
+  // Show the demo setup first for new users, but allow skipping
+  if (!hasData && !showDemo) {
     return <DemoSetup />;
   }
+
+  // If no conversations selected but we have the interface showing, 
+  // show a welcome message in the main area
+  const showWelcomeMessage = !selectedConversationId && !hasData;
 
   return (
     <div className="flex h-screen bg-background">
