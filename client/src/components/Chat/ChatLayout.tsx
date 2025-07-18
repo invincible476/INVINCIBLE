@@ -5,6 +5,7 @@ import { DemoSetup } from './DemoSetup';
 import { ChatWindow } from './ChatWindow';
 import { ContactsList } from './ContactsList';
 import { ProfileSettings } from './ProfileSettings';
+import { WelcomeMessage } from './WelcomeMessage';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { LogOut, MessageSquare, Users, Settings } from 'lucide-react';
@@ -119,6 +120,8 @@ export const ChatLayout = () => {
       <div className="flex-1 flex flex-col">
         {selectedConversationId ? (
           <ChatWindow conversationId={selectedConversationId} />
+        ) : showWelcomeMessage ? (
+          <WelcomeMessage />
         ) : (
           <div className="flex-1 flex items-center justify-center bg-muted/30">
             <div className="text-center">

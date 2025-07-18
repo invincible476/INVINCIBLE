@@ -65,8 +65,8 @@ export const AuthForm = () => {
       });
     } else {
       toast({
-        title: 'Account created!',
-        description: 'Please check your email to verify your account.',
+        title: 'Welcome to Chat Rescuer!',
+        description: 'Your account is ready. You can start chatting immediately.',
       });
     }
 
