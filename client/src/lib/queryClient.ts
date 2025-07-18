@@ -5,8 +5,12 @@ const queryClient = new QueryClient({
     queries: {
       queryFn: async ({ queryKey }) => {
         const url = Array.isArray(queryKey) ? queryKey[0] : queryKey;
+        const token = getAuthToken();
+        
         const response = await fetch(url as string, {
-          credentials: 'include', // Include cookies for session
+          headers: {
+            ...(token && { 'Authorization': `Bearer ${token}` }),
+          },
         });
         
         if (!response.ok) {
@@ -21,12 +25,19 @@ const queryClient = new QueryClient({
   },
 });
 
+// Get JWT token from localStorage
+const getAuthToken = () => {
+  return localStorage.getItem('authToken');
+};
+
 export const apiRequest = async (url: string, options: RequestInit = {}) => {
+  const token = getAuthToken();
+  
   const response = await fetch(url, {
     ...options,
-    credentials: 'include', // Include cookies for session
     headers: {
       'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
       ...options.headers,
     },
   });

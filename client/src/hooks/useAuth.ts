@@ -21,8 +21,13 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is authenticated
-    checkAuthStatus();
+    // Check if user is authenticated using JWT token from localStorage
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      checkAuthStatus();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   const checkAuthStatus = async () => {
@@ -46,6 +51,11 @@ export const useAuth = () => {
         body: JSON.stringify({ email, password, fullName, username }),
       });
       
+      // Store JWT token in localStorage
+      if (response.token) {
+        localStorage.setItem('authToken', response.token);
+      }
+      
       setUser(response.user);
       // Fetch profile after signup
       await checkAuthStatus();
@@ -63,7 +73,12 @@ export const useAuth = () => {
         body: JSON.stringify({ email, password }),
       });
       
-      // Immediately set user state
+      // Store JWT token in localStorage
+      if (response.token) {
+        localStorage.setItem('authToken', response.token);
+      }
+      
+      // Set user state
       setUser(response.user);
       setLoading(false);
       
@@ -88,11 +103,18 @@ export const useAuth = () => {
         method: 'POST',
       });
       
+      // Remove JWT token from localStorage
+      localStorage.removeItem('authToken');
+      
       setUser(null);
       setProfile(null);
       
       return { error: null };
     } catch (error: any) {
+      // Even if API call fails, clear local state
+      localStorage.removeItem('authToken');
+      setUser(null);
+      setProfile(null);
       return { error: { message: error.message } };
     }
   };

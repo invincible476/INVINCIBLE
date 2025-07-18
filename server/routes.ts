@@ -5,45 +5,32 @@ import { storage } from "./storage";
 import { insertUserSchema, insertProfileSchema, insertConversationSchema, insertMessageSchema, insertContactSchema } from "@shared/schema";
 import { z } from "zod";
 
-// Session middleware setup
-import session from "express-session";
-import pgSession from "connect-pg-simple";
-import { pool } from "./db";
+import jwt from "jsonwebtoken";
 
-const PostgreSQLStore = pgSession(session);
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-jwt-secret-key-for-replit-chat-app';
 
-declare module "express-session" {
-  interface SessionData {
-    userId?: number;
-  }
+interface JWTPayload {
+  userId: number;
+  email: string;
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Session configuration with PostgreSQL storage - persists across server restarts
-  app.use(session({
-    secret: process.env.SESSION_SECRET || 'dev-secret-key-for-replit-chat-app',
-    resave: false,
-    saveUninitialized: false,
-    store: new PostgreSQLStore({
-      pool: pool,
-      tableName: 'session',
-      createTableIfMissing: true,
-    }),
-    cookie: {
-      secure: false, // set to true in production with HTTPS
-      httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      sameSite: 'lax',
-    },
-    name: 'chatRescuerSession',
-  }));
-
-  // Auth middleware
+  // JWT Auth middleware
   const requireAuth = (req: any, res: any, next: any) => {
-    if (!req.session.userId) {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+    if (!token) {
       return res.status(401).json({ error: "Not authenticated" });
     }
-    next();
+
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+      req.userId = decoded.userId;
+      next();
+    } catch (error) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
   };
 
   // Auth routes
@@ -78,13 +65,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fullName,
         });
         
-        req.session.userId = user.id;
+        // Generate JWT token
+        const token = jwt.sign(
+          { userId: user.id, email: user.email },
+          JWT_SECRET,
+          { expiresIn: '7d' }
+        );
         
         res.json({ 
           user: { 
             id: user.id, 
             email: user.email 
-          } 
+          },
+          token
         });
       } catch (profileError) {
         // If profile creation fails, clean up the user
@@ -116,13 +109,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Invalid credentials" });
       }
       
-      req.session.userId = user.id;
+      // Generate JWT token
+      const token = jwt.sign(
+        { userId: user.id, email: user.email },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
       
       res.json({ 
         user: { 
           id: user.id, 
           email: user.email 
-        } 
+        },
+        token
       });
     } catch (error) {
       console.error("Signin error:", error);
@@ -131,22 +130,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/auth/signout", (req, res) => {
-    req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ error: "Could not sign out" });
-      }
-      res.json({ message: "Signed out successfully" });
-    });
+    // With JWT, signout is handled client-side by removing token
+    res.json({ message: "Signed out successfully" });
   });
 
   app.get("/api/auth/me", async (req, res) => {
-    if (!req.session.userId) {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
       return res.status(401).json({ error: "Not authenticated" });
     }
-    
+
     try {
-      const user = await storage.getUserById(req.session.userId);
-      const profile = await storage.getProfileByUserId(req.session.userId);
+      const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+      const user = await storage.getUserById(decoded.userId);
+      const profile = await storage.getProfileByUserId(decoded.userId);
       
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -168,7 +167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Profile routes
   app.get("/api/profile", requireAuth, async (req, res) => {
     try {
-      const profile = await storage.getProfileByUserId(req.session.userId!);
+      const profile = await storage.getProfileByUserId(req.userId!);
       res.json(profile);
     } catch (error) {
       console.error("Get profile error:", error);
@@ -179,7 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/profile", requireAuth, async (req, res) => {
     try {
       const updateData = insertProfileSchema.partial().parse(req.body);
-      const profile = await storage.updateProfile(req.session.userId!, updateData);
+      const profile = await storage.updateProfile(req.userId!, updateData);
       res.json(profile);
     } catch (error) {
       console.error("Update profile error:", error);
@@ -190,7 +189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Conversation routes
   app.get("/api/conversations", requireAuth, async (req, res) => {
     try {
-      const conversations = await storage.getConversationsByUserId(req.session.userId!);
+      const conversations = await storage.getConversationsByUserId(req.userId!);
       res.json(conversations);
     } catch (error) {
       console.error("Get conversations error:", error);
@@ -203,11 +202,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const conversationData = insertConversationSchema.parse(req.body);
       const conversation = await storage.createConversation({
         ...conversationData,
-        createdBy: req.session.userId!,
+        createdBy: req.userId!,
       });
       
       // Add creator as participant
-      await storage.addUserToConversation(conversation.id, req.session.userId!);
+      await storage.addUserToConversation(conversation.id, req.userId!);
       
       res.json(conversation);
     } catch (error) {
@@ -236,7 +235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const message = await storage.createMessage({
         ...messageData,
         conversationId: id,
-        senderId: req.session.userId!,
+        senderId: req.userId!,
       });
       
       // Note: Real-time broadcasting would go here in production
@@ -252,7 +251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Contact routes
   app.get("/api/contacts", requireAuth, async (req, res) => {
     try {
-      const contacts = await storage.getContactsByUserId(req.session.userId!);
+      const contacts = await storage.getContactsByUserId(req.userId!);
       res.json(contacts);
     } catch (error) {
       console.error("Get contacts error:", error);
@@ -265,7 +264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const contactData = insertContactSchema.parse(req.body);
       const contact = await storage.createContact({
         ...contactData,
-        userId: req.session.userId!,
+        userId: req.userId!,
       });
       res.json(contact);
     } catch (error) {

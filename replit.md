@@ -38,7 +38,7 @@ The application uses the following main tables:
 - ✅ Fixed authentication flow and password verification (July 18, 2025)
 - ✅ Removed email verification popup and created welcome message
 - ✅ Extended session duration to 7 days for better development experience
-- ✅ Implemented PostgreSQL-based session storage to persist across server restarts
+- ✅ Converted from session-based to JWT token-based authentication stored in localStorage for better persistence across server restarts
 
 ## Important Migration Notes
 ⚠️ **Authentication System Changed**: During migration from Supabase to Replit:
