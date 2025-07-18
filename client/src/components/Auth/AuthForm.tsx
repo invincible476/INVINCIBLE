@@ -40,7 +40,7 @@ export const AuthForm = () => {
     } else {
       toast({
         title: 'Welcome back!',
-        description: 'You have been signed in successfully.',
+        description: 'Sessions now persist across server restarts.',
       });
       // Don't set loading to false here - let the auth state change handle the redirect
     }
@@ -66,7 +66,7 @@ export const AuthForm = () => {
     } else {
       toast({
         title: 'Welcome to Chat Rescuer!',
-        description: 'Your account is ready. You can start chatting immediately.',
+        description: 'Account created! Sessions persist across server restarts.',
       });
     }
 
