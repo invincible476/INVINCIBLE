@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ConversationsList } from './ConversationsList';
-import { DemoSetup } from './SimpleDemoSetup';
-import { ChatWindow } from './SimpleChatWindow';
-import { ContactsList } from './SimpleContactsList';
-import { ProfileSettings } from './SimpleProfileSettings';
+import { DemoSetup } from './DemoSetup';
+import { ChatWindow } from './ChatWindow';
+import { ContactsList } from './ContactsList';
+import { ProfileSettings } from './ProfileSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { LogOut, MessageSquare, Users, Settings } from 'lucide-react';
