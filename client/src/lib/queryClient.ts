@@ -1,5 +1,10 @@
 import { QueryClient } from "@tanstack/react-query";
 
+// Get JWT token from localStorage
+const getAuthToken = () => {
+  return localStorage.getItem('authToken');
+};
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -24,11 +29,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-// Get JWT token from localStorage
-const getAuthToken = () => {
-  return localStorage.getItem('authToken');
-};
 
 export const apiRequest = async (url: string, options: RequestInit = {}) => {
   const token = getAuthToken();

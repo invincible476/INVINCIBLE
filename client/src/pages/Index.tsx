@@ -4,6 +4,8 @@ import { ChatLayout } from '@/components/Chat/ChatLayout';
 
 const Index = () => {
   const { user, loading } = useAuth();
+  
+
 
   if (loading) {
     return (

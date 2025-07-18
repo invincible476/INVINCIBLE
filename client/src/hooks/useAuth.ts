@@ -33,13 +33,15 @@ export const useAuth = () => {
   const checkAuthStatus = async () => {
     try {
       const response = await apiRequest('/api/auth/me');
+      
       setUser(response.user);
       setProfile(response.profile);
+      setLoading(false);
     } catch (error) {
       // User is not authenticated
+      localStorage.removeItem('authToken');
       setUser(null);
       setProfile(null);
-    } finally {
       setLoading(false);
     }
   };
@@ -78,21 +80,16 @@ export const useAuth = () => {
         localStorage.setItem('authToken', response.token);
       }
       
-      // Set user state
+      // Set user state immediately
       setUser(response.user);
       setLoading(false);
       
-      // Fetch full auth data including profile
-      try {
-        const authResponse = await apiRequest('/api/auth/me');
-        setUser(authResponse.user);
-        setProfile(authResponse.profile);
-      } catch (error) {
-        console.error('Post-signin auth check failed:', error);
-      }
+      // Fetch full auth data including profile immediately
+      await checkAuthStatus();
       
       return { data: response, error: null };
     } catch (error: any) {
+      setLoading(false);
       return { data: null, error: { message: error.message } };
     }
   };
