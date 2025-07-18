@@ -42,11 +42,13 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserById(id: number): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  deleteUser(id: number): Promise<void>;
   verifyPassword(password: string, hashedPassword: string): Promise<boolean>;
   hashPassword(password: string): Promise<string>;
 
   // Profile methods
   getProfileByUserId(userId: number): Promise<Profile | undefined>;
+  getProfileByUsername(username: string): Promise<Profile | undefined>;
   createProfile(profile: InsertProfile): Promise<Profile>;
   updateProfile(userId: number, updates: Partial<InsertProfile>): Promise<Profile | undefined>;
 
@@ -92,8 +94,17 @@ export class DatabaseStorage implements IStorage {
     return bcrypt.hash(password, 12);
   }
 
+  async deleteUser(id: number): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
+  }
+
   async getProfileByUserId(userId: number): Promise<Profile | undefined> {
     const result = await db.select().from(profiles).where(eq(profiles.userId, userId));
+    return result[0];
+  }
+
+  async getProfileByUsername(username: string): Promise<Profile | undefined> {
+    const result = await db.select().from(profiles).where(eq(profiles.username, username));
     return result[0];
   }
 
