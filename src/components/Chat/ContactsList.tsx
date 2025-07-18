@@ -92,18 +92,18 @@ export const ContactsList = () => {
 
     setIsAddingContact(true);
     try {
-      // First, find the user by email
+      // First, find the user by username or email
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
-        .eq('user_id', newContactEmail); // This assumes email is stored or we need auth.users access
+        .select('user_id, full_name, username')
+        .or(`username.eq.${newContactEmail},full_name.ilike.%${newContactEmail}%`);
 
       if (profileError) throw profileError;
 
       if (!profiles || profiles.length === 0) {
         toast({
           title: 'User not found',
-          description: 'No user found with that email address',
+          description: 'No user found with that username or name',
           variant: 'destructive',
         });
         return;
@@ -279,11 +279,11 @@ export const ContactsList = () => {
               </DialogHeader>
               <form onSubmit={addContact} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="contact-email">Email Address</Label>
+                  <Label htmlFor="contact-email">Username or Name</Label>
                   <Input
                     id="contact-email"
-                    type="email"
-                    placeholder="Enter email address"
+                    type="text"
+                    placeholder="Enter username or name"
                     value={newContactEmail}
                     onChange={(e) => setNewContactEmail(e.target.value)}
                     required

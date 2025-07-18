@@ -52,32 +52,44 @@ export const ConversationsList = ({
 
   const fetchConversations = async () => {
     try {
-      // Get conversations with participants and last message
-      const { data: conversationsData, error: conversationsError } = await supabase
-        .from('conversations')
+      // Get conversations where user is a participant
+      const { data: participantsData, error: participantsError } = await supabase
+        .from('conversation_participants')
         .select(`
-          id,
-          name,
-          is_group,
-          avatar_url,
-          updated_at,
-          conversation_participants!inner (
-            user_id,
-            profiles (
-              id,
-              full_name,
-              username,
-              avatar_url
-            )
+          conversation_id,
+          conversations (
+            id,
+            name,
+            is_group,
+            avatar_url,
+            updated_at
           )
         `)
-        .eq('conversation_participants.user_id', user?.id);
+        .eq('user_id', user?.id);
 
-      if (conversationsError) throw conversationsError;
+      if (participantsError) throw participantsError;
 
-      // Get last message for each conversation
-      const conversationsWithMessages = await Promise.all(
-        (conversationsData || []).map(async (conversation) => {
+      // Get all participants for each conversation
+      const conversationsWithDetails = await Promise.all(
+        (participantsData || []).map(async (participant) => {
+          const conversation = participant.conversations;
+          if (!conversation) return null;
+
+          // Get all participants for this conversation
+          const { data: allParticipants } = await supabase
+            .from('conversation_participants')
+            .select(`
+              user_id,
+              profiles (
+                id,
+                full_name,
+                username,
+                avatar_url
+              )
+            `)
+            .eq('conversation_id', conversation.id);
+
+          // Get last message
           const { data: lastMessage } = await supabase
             .from('messages')
             .select('content, created_at, sender_id')
@@ -89,12 +101,12 @@ export const ConversationsList = ({
           return {
             ...conversation,
             last_message: lastMessage,
-            participants: conversation.conversation_participants.map((p: any) => p.profiles),
+            participants: allParticipants?.map((p: any) => p.profiles).filter(Boolean) || [],
           };
         })
       );
 
-      setConversations(conversationsWithMessages);
+      setConversations(conversationsWithDetails.filter(Boolean));
     } catch (error) {
       console.error('Error fetching conversations:', error);
       toast({
