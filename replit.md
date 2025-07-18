@@ -36,6 +36,13 @@ The application uses the following main tables:
 - ✅ Removed all Supabase dependencies and code
 - ✅ Updated all components to use new API endpoints
 
+## Important Migration Notes
+⚠️ **Authentication System Changed**: During migration from Supabase to Replit:
+- **Old Supabase accounts are not transferred** - Users need to create new accounts
+- **No email confirmation required** - Accounts are activated immediately upon signup
+- **Secure session-based authentication** - More suitable for Replit environment
+- **Original Supabase data remains safe** in your Supabase project if needed
+
 ## User Preferences
 *None documented yet*
 
