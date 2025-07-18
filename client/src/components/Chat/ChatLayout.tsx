@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import { ConversationsList } from './ConversationsList';
-import { DemoSetup } from './DemoSetup';
-import { ChatWindow } from './ChatWindow';
-import { ContactsList } from './ContactsList';
-import { ProfileSettings } from './ProfileSettings';
+import { DemoSetup } from './SimpleDemoSetup';
+import { ChatWindow } from './SimpleChatWindow';
+import { ContactsList } from './SimpleContactsList';
+import { ProfileSettings } from './SimpleProfileSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { LogOut, MessageSquare, Users, Settings } from 'lucide-react';
@@ -23,27 +23,19 @@ export const ChatLayout = () => {
   };
 
   // Check if user has any conversations or contacts to show demo setup
-  const [hasData, setHasData] = useState<boolean | null>(null);
+  const { data: conversations = [] } = useQuery({
+    queryKey: ['/api/conversations'],
+    enabled: !!user,
+  });
 
-  useEffect(() => {
-    const checkForData = async () => {
-      const { data: conversations } = await supabase
-        .from('conversation_participants')
-        .select('id')
-        .limit(1);
-      
-      const { data: contacts } = await supabase
-        .from('contacts')
-        .select('id')
-        .limit(1);
+  const { data: contacts = [] } = useQuery({
+    queryKey: ['/api/contacts'],
+    enabled: !!user,
+  });
 
-      setHasData((conversations && conversations.length > 0) || (contacts && contacts.length > 0));
-    };
+  const hasData = conversations.length > 0 || contacts.length > 0;
 
-    checkForData();
-  }, []);
-
-  if (hasData === false && !showDemo) {
+  if (!hasData && !showDemo) {
     return <DemoSetup />;
   }
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,119 +37,24 @@ export const ConversationsList = ({
   selectedConversationId,
   onSelectConversation,
 }: ConversationsListProps) => {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const { user } = useAuth();
   const { toast } = useToast();
 
+  const { data: conversations = [], isLoading: loading, error } = useQuery({
+    queryKey: ['/api/conversations'],
+    enabled: !!user,
+  });
+
   useEffect(() => {
-    if (user) {
-      fetchConversations();
-      setupRealtimeSubscriptions();
-    }
-  }, [user]);
-
-  const fetchConversations = async () => {
-    try {
-      // Get conversations where user is a participant
-      const { data: participantsData, error: participantsError } = await supabase
-        .from('conversation_participants')
-        .select(`
-          conversation_id,
-          conversations (
-            id,
-            name,
-            is_group,
-            avatar_url,
-            updated_at
-          )
-        `)
-        .eq('user_id', user?.id);
-
-      if (participantsError) throw participantsError;
-
-      // Get all participants for each conversation
-      const conversationsWithDetails = await Promise.all(
-        (participantsData || []).map(async (participant) => {
-          const conversation = participant.conversations;
-          if (!conversation) return null;
-
-          // Get all participants for this conversation
-          const { data: allParticipants } = await supabase
-            .from('conversation_participants')
-            .select(`
-              user_id,
-              profiles (
-                id,
-                full_name,
-                username,
-                avatar_url
-              )
-            `)
-            .eq('conversation_id', conversation.id);
-
-          // Get last message
-          const { data: lastMessage } = await supabase
-            .from('messages')
-            .select('content, created_at, sender_id')
-            .eq('conversation_id', conversation.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
-
-          return {
-            ...conversation,
-            last_message: lastMessage,
-            participants: allParticipants?.map((p: any) => p.profiles).filter(Boolean) || [],
-          };
-        })
-      );
-
-      setConversations(conversationsWithDetails.filter(Boolean));
-    } catch (error) {
-      console.error('Error fetching conversations:', error);
+    if (error) {
       toast({
         title: 'Error',
         description: 'Failed to load conversations',
         variant: 'destructive',
       });
-    } finally {
-      setLoading(false);
     }
-  };
-
-  const setupRealtimeSubscriptions = () => {
-    const channel = supabase
-      .channel('conversations-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'conversations',
-        },
-        () => {
-          fetchConversations();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-        },
-        () => {
-          fetchConversations();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
+  }, [error, toast]);
 
   const getConversationName = (conversation: Conversation) => {
     if (conversation.name) return conversation.name;
