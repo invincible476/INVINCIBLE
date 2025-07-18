@@ -14,27 +14,37 @@ export const DemoSetup = () => {
 
   const createDemoMutation = useMutation({
     mutationFn: async () => {
-      // For now, just create a simple demo conversation
-      return apiRequest('/api/conversations', {
+      // Create a demo conversation that user can start using immediately
+      const conversation = await apiRequest('/api/conversations', {
         method: 'POST',
         body: JSON.stringify({
-          name: 'Demo Chat',
+          name: 'Welcome Chat',
           isGroup: false,
         }),
       });
+      
+      // Send a welcome message to the conversation
+      await apiRequest(`/api/conversations/${conversation.id}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({
+          content: 'Welcome to Chat Rescuer! 🎉 Your migration from Supabase to Replit is complete. You can now start chatting, adding contacts, and creating conversations.',
+        }),
+      });
+      
+      return conversation;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
       queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
       toast({
-        title: 'Demo data created!',
-        description: 'You can now explore the chat features.',
+        title: 'Welcome! 🎉',
+        description: 'Your chat environment is ready. Start messaging now!',
       });
     },
     onError: (error: any) => {
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to create demo data',
+        title: 'Setup failed',
+        description: error.message || 'Could not set up your chat environment',
         variant: 'destructive',
       });
     },
@@ -49,7 +59,7 @@ export const DemoSetup = () => {
             Welcome to Chat Rescuer!
           </CardTitle>
           <p className="text-muted-foreground">
-            Get started by creating some demo data to explore the features
+            Your Supabase to Replit migration is complete! Set up your chat environment to start messaging.
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -92,12 +102,12 @@ export const DemoSetup = () => {
               ) : (
                 <>
                   <Sparkles className="h-4 w-4 mr-2" />
-                  Create Demo Data
+                  Set Up Chat Environment
                 </>
               )}
             </Button>
             <p className="text-sm text-muted-foreground">
-              This will create sample conversations and contacts for you to explore
+              This will create your first conversation so you can start chatting immediately
             </p>
           </div>
         </CardContent>

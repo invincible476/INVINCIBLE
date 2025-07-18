@@ -16,7 +16,7 @@ export const ChatLayout = () => {
   const [activeView, setActiveView] = useState<ActiveView>('chat');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [showDemo, setShowDemo] = useState(false);
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
 
   const handleSignOut = async () => {
     await signOut();
@@ -35,7 +35,8 @@ export const ChatLayout = () => {
 
   const hasData = conversations.length > 0 || contacts.length > 0;
 
-  if (!hasData && !showDemo) {
+  // Always show the demo setup first for new users
+  if (!hasData) {
     return <DemoSetup />;
   }
 
