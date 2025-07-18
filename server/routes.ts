@@ -18,21 +18,22 @@ declare module "express-session" {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Session configuration
+  // Session configuration - longer duration for development
   app.use(session({
     secret: process.env.SESSION_SECRET || 'dev-secret-key-for-replit-chat-app',
     resave: false,
     saveUninitialized: false,
     store: new MemoryStoreSession({
       checkPeriod: 86400000, // prune expired entries every 24h
+      ttl: 7 * 24 * 60 * 60 * 1000, // 7 days TTL
     }),
     cookie: {
       secure: false, // set to true in production with HTTPS
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: 'lax', // Better for development
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days for development
+      sameSite: 'lax',
     },
-    name: 'sessionId', // Custom session name
+    name: 'chatRescuerSession',
   }));
 
   // Auth middleware

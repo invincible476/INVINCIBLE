@@ -35,6 +35,9 @@ The application uses the following main tables:
 - ✅ Set up WebSocket for real-time messaging
 - ✅ Removed all Supabase dependencies and code
 - ✅ Updated all components to use new API endpoints
+- ✅ Fixed authentication flow and password verification (July 18, 2025)
+- ✅ Removed email verification popup and created welcome message
+- ✅ Extended session duration to 7 days for better development experience
 
 ## Important Migration Notes
 ⚠️ **Authentication System Changed**: During migration from Supabase to Replit:

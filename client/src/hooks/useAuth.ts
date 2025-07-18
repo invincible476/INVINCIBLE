@@ -58,22 +58,18 @@ export const useAuth = () => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('Starting signin...');
       const response = await apiRequest('/api/auth/signin', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
       
-      console.log('Signin response received:', response);
-      
       // Immediately set user state
       setUser(response.user);
       setLoading(false);
       
-      // Also immediately fetch full auth data
+      // Fetch full auth data including profile
       try {
         const authResponse = await apiRequest('/api/auth/me');
-        console.log('Auth me response:', authResponse);
         setUser(authResponse.user);
         setProfile(authResponse.profile);
       } catch (error) {
@@ -82,7 +78,6 @@ export const useAuth = () => {
       
       return { data: response, error: null };
     } catch (error: any) {
-      console.error('Signin failed:', error);
       return { data: null, error: { message: error.message } };
     }
   };
