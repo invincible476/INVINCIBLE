@@ -37,7 +37,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Auth middleware
   const requireAuth = (req: any, res: any, next: any) => {
-    console.log('Session check:', req.session.userId, req.session);
     if (!req.session.userId) {
       return res.status(401).json({ error: "Not authenticated" });
     }
@@ -102,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/signin", async (req, res) => {
     try {
-      const { email, password } = insertUserSchema.parse(req.body);
+      const { email, password } = req.body;
       
       const user = await storage.getUserByEmail(email);
       if (!user) {

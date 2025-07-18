@@ -28,11 +28,9 @@ export const useAuth = () => {
   const checkAuthStatus = async () => {
     try {
       const response = await apiRequest('/api/auth/me');
-      console.log('Auth check response:', response);
       setUser(response.user);
       setProfile(response.profile);
     } catch (error) {
-      console.log('Auth check failed:', error);
       // User is not authenticated
       setUser(null);
       setProfile(null);
@@ -65,7 +63,6 @@ export const useAuth = () => {
         body: JSON.stringify({ email, password }),
       });
       
-      console.log('SignIn response:', response);
       setUser(response.user);
       
       // Small delay to ensure session is properly set
@@ -75,7 +72,6 @@ export const useAuth = () => {
       
       return { data: response, error: null };
     } catch (error: any) {
-      console.error('SignIn error:', error);
       return { data: null, error: { message: error.message } };
     }
   };
