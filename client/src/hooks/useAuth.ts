@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export interface User {
   id: number;
@@ -16,7 +16,9 @@ export interface Profile {
 }
 
 export const useAuth = () => {
-  return useQuery({
+  const queryClient = useQueryClient();
+  
+  const query = useQuery({
     queryKey: ['/api/user'],
     queryFn: async (): Promise<User | null> => {
       try {
@@ -51,4 +53,93 @@ export const useAuth = () => {
     retry: false,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
+
+  const signIn = async (email: string, password: string) => {
+    try {
+      const response = await fetch('/api/auth/signin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { error: { message: data.error || 'Sign in failed' } };
+      }
+
+      // Store token if provided
+      if (data.token) {
+        localStorage.setItem('auth-token', data.token);
+      }
+
+      // Invalidate and refetch user data
+      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      
+      return { error: null };
+    } catch (error) {
+      return { error: { message: 'Network error. Please try again.' } };
+    }
+  };
+
+  const signUp = async (email: string, password: string, fullName: string, username: string) => {
+    try {
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ email, password, fullName, username }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { error: { message: data.error || 'Sign up failed' } };
+      }
+
+      // Store token if provided
+      if (data.token) {
+        localStorage.setItem('auth-token', data.token);
+      }
+
+      // Invalidate and refetch user data
+      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      
+      return { error: null };
+    } catch (error) {
+      return { error: { message: 'Network error. Please try again.' } };
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      await fetch('/api/auth/signout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      
+      // Remove token
+      localStorage.removeItem('auth-token');
+      
+      // Clear user data
+      queryClient.setQueryData(['/api/user'], null);
+      
+      return { error: null };
+    } catch (error) {
+      return { error: { message: 'Sign out failed' } };
+    }
+  };
+
+  return {
+    ...query,
+    user: query.data,
+    signIn,
+    signUp,
+    signOut,
+  };
 };
