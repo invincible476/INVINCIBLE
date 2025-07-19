@@ -26,28 +26,47 @@ export const AuthForm = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!signInForm.email || !signInForm.password) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     setIsLoading(true);
 
     const { error } = await signIn(signInForm.email, signInForm.password);
 
     if (error) {
       toast({
-        title: 'Error',
+        title: 'Sign In Failed',
         description: error.message,
         variant: 'destructive',
       });
-      setIsLoading(false);
     } else {
       toast({
         title: 'Welcome back!',
-        description: 'Sessions now persist across server restarts.',
+        description: 'Successfully signed in',
       });
-      // Don't set loading to false here - let the auth state change handle the redirect
     }
+    
+    setIsLoading(false);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!signUpForm.email || !signUpForm.password || !signUpForm.fullName || !signUpForm.username) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     setIsLoading(true);
 
     const { error } = await signUp(
@@ -59,14 +78,14 @@ export const AuthForm = () => {
 
     if (error) {
       toast({
-        title: 'Error',
+        title: 'Sign Up Failed',
         description: error.message,
         variant: 'destructive',
       });
     } else {
       toast({
         title: 'Welcome to Chat Rescuer!',
-        description: 'Account created! Sessions persist across server restarts.',
+        description: 'Account created successfully!',
       });
     }
 

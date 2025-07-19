@@ -101,14 +101,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/signin", async (req, res) => {
     try {
+      console.log("Sign-in attempt:", req.body);
       const { email, password } = req.body;
       
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+      
       const user = await storage.getUserByEmail(email);
+      console.log("User found:", user ? "yes" : "no");
+      
       if (!user) {
         return res.status(401).json({ error: "Invalid credentials" });
       }
       
       const isValid = await storage.verifyPassword(password, user.password);
+      console.log("Password valid:", isValid);
+      
       if (!isValid) {
         return res.status(401).json({ error: "Invalid credentials" });
       }
@@ -120,6 +129,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { expiresIn: '7d' }
       );
       
+      console.log("Login successful for:", email);
+      
       res.json({ 
         user: { 
           id: user.id, 
@@ -129,7 +140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Signin error:", error);
-      res.status(400).json({ error: "Invalid request" });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 

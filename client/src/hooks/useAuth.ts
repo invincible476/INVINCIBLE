@@ -56,6 +56,8 @@ export const useAuth = () => {
 
   const signUp = async (email: string, password: string, fullName: string, username: string) => {
     try {
+      setLoading(true);
+      
       const response = await apiRequest('/api/auth/signup', {
         method: 'POST',
         body: JSON.stringify({ email, password, fullName, username }),
@@ -64,20 +66,23 @@ export const useAuth = () => {
       // Store JWT token in localStorage
       if (response.token) {
         localStorage.setItem('authToken', response.token);
+        setUser(response.user);
+        // Fetch profile after signup
+        await checkAuthStatus();
       }
       
-      setUser(response.user);
-      // Fetch profile after signup
-      await checkAuthStatus();
-      
+      setLoading(false);
       return { data: response, error: null };
     } catch (error: any) {
+      setLoading(false);
       return { data: null, error: { message: error.message } };
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
+      setLoading(true);
+      
       const response = await apiRequest('/api/auth/signin', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
@@ -86,15 +91,12 @@ export const useAuth = () => {
       // Store JWT token in localStorage
       if (response.token) {
         localStorage.setItem('authToken', response.token);
+        setUser(response.user);
+        // Fetch full auth data including profile
+        await checkAuthStatus();
       }
       
-      // Set user state immediately
-      setUser(response.user);
       setLoading(false);
-      
-      // Fetch full auth data including profile immediately
-      await checkAuthStatus();
-      
       return { data: response, error: null };
     } catch (error: any) {
       setLoading(false);
