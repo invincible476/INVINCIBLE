@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,7 +35,7 @@ export const AuthForm = () => {
       });
       return;
     }
-    
+
     setIsLoading(true);
 
     const { error } = await signIn(signInForm.email, signInForm.password);
@@ -53,13 +52,13 @@ export const AuthForm = () => {
         description: 'Successfully signed in',
       });
     }
-    
+
     setIsLoading(false);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!signUpForm.email || !signUpForm.password || !signUpForm.fullName || !signUpForm.username) {
       toast({
         title: 'Error',
@@ -68,7 +67,7 @@ export const AuthForm = () => {
       });
       return;
     }
-    
+
     setIsLoading(true);
 
     const { error } = await signUp(
@@ -124,6 +123,7 @@ export const AuthForm = () => {
                         setSignInForm({ ...signInForm, email: e.target.value })
                       }
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2">
@@ -137,6 +137,7 @@ export const AuthForm = () => {
                         setSignInForm({ ...signInForm, password: e.target.value })
                       }
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
@@ -158,6 +159,7 @@ export const AuthForm = () => {
                         setSignUpForm({ ...signUpForm, fullName: e.target.value })
                       }
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2">
@@ -171,6 +173,7 @@ export const AuthForm = () => {
                         setSignUpForm({ ...signUpForm, username: e.target.value })
                       }
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2">
@@ -184,6 +187,7 @@ export const AuthForm = () => {
                         setSignUpForm({ ...signUpForm, email: e.target.value })
                       }
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2">
@@ -197,6 +201,7 @@ export const AuthForm = () => {
                         setSignUpForm({ ...signUpForm, password: e.target.value })
                       }
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>

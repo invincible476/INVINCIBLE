@@ -42,38 +42,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fullName: z.string().min(1),
         username: z.string().min(1),
       });
-      
+
       const { email, password, fullName, username } = signupSchema.parse(req.body);
-      
+
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
         return res.status(400).json({ error: "User already exists" });
       }
-      
+
       // Check if username already exists
       const existingProfile = await storage.getProfileByUsername(username);
       if (existingProfile) {
         return res.status(400).json({ error: "Username already taken" });
       }
-      
+
       // Create user and profile in transaction-like manner
       try {
         const user = await storage.createUser({ email, password });
-        
+
         const profile = await storage.createProfile({
           userId: user.id,
           username,
           fullName,
         });
-        
+
         // Generate JWT token
         const token = jwt.sign(
           { userId: user.id, email: user.email },
           JWT_SECRET,
           { expiresIn: '7d' }
         );
-        
+
         res.json({ 
           user: { 
             id: user.id, 
@@ -90,7 +90,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         throw profileError;
       }
-      
+
     } catch (error) {
       console.error("Signup error:", error);
       if (error.message?.includes('duplicate key') || error.message?.includes('already exists')) {
@@ -103,36 +103,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/signin", async (req, res) => {
     try {
-      console.log("Sign-in attempt:", req.body);
       const { email, password } = req.body;
-      
+      console.log('Sign-in attempt:', { email, password });
+
       if (!email || !password) {
-        return res.status(400).json({ error: "Email and password are required" });
+        return res.status(400).json({ error: 'Email and password are required' });
       }
-      
+
       const user = await storage.getUserByEmail(email);
-      console.log("User found:", user ? "yes" : "no");
-      
+
+      console.log('User found:', user ? 'yes' : 'no');
+
       if (!user) {
-        return res.status(401).json({ error: "Invalid credentials" });
+        return res.status(401).json({ error: 'Invalid credentials' });
       }
-      
+
       const isValid = await storage.verifyPassword(password, user.password);
-      console.log("Password valid:", isValid);
-      
+      console.log('Password valid:', isValid);
+
       if (!isValid) {
-        return res.status(401).json({ error: "Invalid credentials" });
+        return res.status(401).json({ error: 'Invalid credentials' });
       }
-      
+
       // Generate JWT token
       const token = jwt.sign(
         { userId: user.id, email: user.email },
         JWT_SECRET,
         { expiresIn: '7d' }
       );
-      
+
       console.log("Login successful for:", email);
-      
+
       res.json({ 
         user: { 
           id: user.id, 
@@ -162,13 +163,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
       const user = await storage.getUserById(decoded.userId);
-      
+
       if (!user) {
         return res.status(401).json({ error: "User not found" });
       }
-      
+
       const profile = await storage.getProfileByUserId(decoded.userId);
-      
+
       res.json({ 
         user: { 
           id: user.id, 
@@ -218,7 +219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/conversations", requireAuth, async (req, res) => {
     try {
       const { participants = [], ...conversationData } = req.body;
-      
+
       // For 1:1 conversations, check if one already exists
       if (!conversationData.isGroup && participants.length === 1) {
         const existingConversation = await storage.findExistingConversation(req.userId!, participants[0]);
@@ -226,23 +227,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.json(existingConversation);
         }
       }
-      
+
       const parsedData = insertConversationSchema.parse(conversationData);
       const conversation = await storage.createConversation({
         ...parsedData,
         createdBy: req.userId!,
       });
-      
+
       // Add creator as participant
       await storage.addUserToConversation(conversation.id, req.userId!);
-      
+
       // Add other participants
       for (const participantId of participants) {
         if (participantId !== req.userId) {
           await storage.addUserToConversation(conversation.id, participantId);
         }
       }
-      
+
       res.json(conversation);
     } catch (error) {
       console.error("Create conversation error:", error);
@@ -280,13 +281,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { content, messageType = 'text' } = req.body;
-      
+
       if (!content || !content.trim()) {
         return res.status(400).json({ error: "Message content is required" });
       }
-      
+
       console.log(`Creating message for conversation ${id} from user ${req.userId}`);
-      
+
       // Create the complete message object with conversationId and senderId
       const messageData = {
         content: content.trim(),
@@ -294,17 +295,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         conversationId: id,
         senderId: req.userId!,
       };
-      
+
       // Parse with the complete data
       const parsedMessageData = insertMessageSchema.parse(messageData);
-      
+
       const message = await storage.createMessage(parsedMessageData);
-      
+
       console.log(`Message created successfully:`, message.id);
-      
+
       // Note: Real-time broadcasting would go here in production
       // For now, clients will refetch via polling or manual refresh
-      
+
       res.json(message);
     } catch (error) {
       console.error("Create message error:", error);
@@ -341,14 +342,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!email || typeof email !== 'string') {
         return res.status(400).json({ error: "Email parameter is required" });
       }
-      
+
       const user = await storage.getUserByEmail(email);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      
+
       const profile = await storage.getProfileByUserId(user.id);
-      
+
       res.json({ 
         user: { 
           id: user.id, 
@@ -365,29 +366,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/contacts", requireAuth, async (req, res) => {
     try {
       const { contactId } = req.body;
-      
+
       if (!contactId || typeof contactId !== 'number') {
         return res.status(400).json({ error: "Contact ID is required and must be a number" });
       }
-      
+
       // Check if contact already exists
       const existingContact = await storage.getExistingContact(req.userId!, contactId);
       if (existingContact) {
         return res.status(400).json({ error: "Contact already exists" });
       }
-      
+
       // Check if user is trying to add themselves
       if (req.userId === contactId) {
         return res.status(400).json({ error: "Cannot add yourself as a contact" });
       }
-      
+
       // Create contact data object
       const contactData = {
         userId: req.userId!,
         contactId,
         status: "accepted"
       };
-      
+
       const contact = await storage.createContact(contactData);
       res.json(contact);
     } catch (error) {
@@ -402,7 +403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // In production, you can enable this for real-time features
   /*
   const wss = new WebSocketServer({ server: httpServer });
-  
+
   wss.on('connection', (ws: any) => {
     console.log('WebSocket client connected');
     // WebSocket logic here
