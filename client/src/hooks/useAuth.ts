@@ -94,7 +94,6 @@ export function useAuth() {
       };
       
       queryClient.setQueryData(['auth'], authData);
-      queryClient.invalidateQueries({ queryKey: ['auth'] });
       toast.success('Signed in successfully');
     },
     onError: (error) => {
@@ -137,7 +136,6 @@ export function useAuth() {
       };
       
       queryClient.setQueryData(['auth'], authData);
-      queryClient.invalidateQueries({ queryKey: ['auth'] });
       toast.success('Account created successfully');
     },
     onError: (error) => {

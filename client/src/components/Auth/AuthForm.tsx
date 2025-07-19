@@ -38,18 +38,16 @@ export const AuthForm = () => {
 
     setIsLoading(true);
 
-    const { error } = await signIn(signInForm.email, signInForm.password);
-
-    if (error) {
+    try {
+      signIn({
+        email: signInForm.email,
+        password: signInForm.password,
+      });
+    } catch (error: any) {
       toast({
         title: 'Sign In Failed',
-        description: error.message,
+        description: error.message || 'Failed to sign in',
         variant: 'destructive',
-      });
-    } else {
-      toast({
-        title: 'Welcome back!',
-        description: 'Successfully signed in',
       });
     }
 
@@ -70,23 +68,18 @@ export const AuthForm = () => {
 
     setIsLoading(true);
 
-    const { error } = await signUp(
-      signUpForm.email,
-      signUpForm.password,
-      signUpForm.fullName,
-      signUpForm.username
-    );
-
-    if (error) {
+    try {
+      signUp({
+        email: signUpForm.email,
+        password: signUpForm.password,
+        username: signUpForm.username,
+        fullName: signUpForm.fullName,
+      });
+    } catch (error: any) {
       toast({
         title: 'Sign Up Failed',
-        description: error.message,
+        description: error.message || 'Failed to create account',
         variant: 'destructive',
-      });
-    } else {
-      toast({
-        title: 'Welcome to Chat Rescuer!',
-        description: 'Account created successfully!',
       });
     }
 
