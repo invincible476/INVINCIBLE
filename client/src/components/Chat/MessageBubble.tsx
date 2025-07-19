@@ -1,5 +1,5 @@
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
 interface Message {
@@ -7,22 +7,39 @@ interface Message {
   content: string;
   senderId: number;
   createdAt: string;
+  messageType: string;
   sender?: {
-    id: string;
-    fullName: string;
-    username: string;
-    avatarUrl: string;
+    id: number;
+    profile: {
+      id: string;
+      username: string;
+      fullName: string;
+      avatarUrl?: string;
+    };
   };
 }
 
 interface MessageBubbleProps {
   message: Message;
   isOwnMessage: boolean;
-  showAvatar?: boolean;
+  showAvatar: boolean;
 }
 
-export const MessageBubble = ({ message, isOwnMessage, showAvatar = true }: MessageBubbleProps) => {
+export const MessageBubble = ({ message, isOwnMessage, showAvatar }: MessageBubbleProps) => {
+  const getSenderName = () => {
+    if (isOwnMessage) return 'You';
+    if (message.sender?.profile) {
+      return message.sender.profile.fullName || message.sender.profile.username || 'Unknown User';
+    }
+    return 'Unknown User';
+  };
+
+  const getSenderAvatar = () => {
+    return message.sender?.profile?.avatarUrl || null;
+  };
+
   const getInitials = (name: string) => {
+    if (!name || name === 'Unknown User') return 'U';
     return name
       .split(' ')
       .map((n) => n[0])
@@ -31,48 +48,42 @@ export const MessageBubble = ({ message, isOwnMessage, showAvatar = true }: Mess
       .slice(0, 2);
   };
 
+  const senderName = getSenderName();
+
   return (
-    <div className={cn(
-      "flex gap-2 mb-4 max-w-full",
-      isOwnMessage ? "flex-row-reverse" : "flex-row"
-    )}>
-      {showAvatar && (
-        <div className="flex-shrink-0 self-end">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={message.sender?.avatarUrl || ''} />
-            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-              {getInitials(message.sender?.fullName || message.sender?.username || (isOwnMessage ? 'You' : 'U'))}
+    <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-1`}>
+      <div className={`flex ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'} items-end space-x-2 max-w-[70%]`}>
+        {showAvatar && !isOwnMessage && (
+          <Avatar className="h-8 w-8 mb-1">
+            <AvatarImage src={getSenderAvatar()} />
+            <AvatarFallback className="text-xs bg-muted">
+              {getInitials(senderName)}
             </AvatarFallback>
           </Avatar>
-        </div>
-      )}
-      
-      <div className={cn(
-        "flex flex-col gap-1 min-w-0 flex-1",
-        isOwnMessage ? "items-end" : "items-start",
-        !showAvatar && (isOwnMessage ? "mr-10" : "ml-10")
-      )}>
-        {!isOwnMessage && showAvatar && (
-          <p className="text-xs text-muted-foreground px-2 font-medium">
-            {message.sender?.fullName || message.sender?.username || 'Unknown'}
-          </p>
         )}
+        {!showAvatar && !isOwnMessage && <div className="w-8" />}
         
-        <div className={cn(
-          "max-w-[70%] rounded-lg px-3 py-2 break-words shadow-sm",
-          isOwnMessage 
-            ? "bg-blue-500 text-white rounded-br-none" 
-            : "bg-gray-100 text-gray-900 rounded-bl-none border"
-        )}>
-          <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+        <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'}`}>
+          {showAvatar && !isOwnMessage && (
+            <span className="text-xs text-muted-foreground mb-1 px-2">
+              {senderName}
+            </span>
+          )}
+          
+          <div
+            className={`px-4 py-2 rounded-2xl max-w-md break-words ${
+              isOwnMessage
+                ? 'bg-primary text-primary-foreground rounded-br-sm'
+                : 'bg-white border border-gray-200 text-gray-900 rounded-bl-sm'
+            }`}
+          >
+            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+          </div>
+          
+          <span className="text-xs text-muted-foreground mt-1 px-2">
+            {format(new Date(message.createdAt), 'HH:mm')}
+          </span>
         </div>
-        
-        <p className={cn(
-          "text-xs text-gray-500 px-1 mt-1",
-          isOwnMessage ? "text-right" : "text-left"
-        )}>
-          {format(new Date(message.createdAt), 'HH:mm')}
-        </p>
       </div>
     </div>
   );

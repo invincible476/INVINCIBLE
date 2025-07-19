@@ -1,7 +1,8 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -10,6 +11,17 @@ import { useToast } from '@/hooks/use-toast';
 import { MessageInput } from './MessageInput';
 import { MessageBubble } from './MessageBubble';
 
+interface User {
+  id: number;
+  email: string;
+  profile?: {
+    id: string;
+    username: string;
+    fullName: string;
+    avatarUrl?: string;
+  };
+}
+
 interface Message {
   id: string;
   content: string;
@@ -17,11 +29,29 @@ interface Message {
   createdAt: string;
   messageType: string;
   sender?: {
-    id: string;
-    fullName: string;
-    username: string;
-    avatarUrl: string;
+    id: number;
+    profile: {
+      id: string;
+      username: string;
+      fullName: string;
+      avatarUrl?: string;
+    };
   };
+}
+
+interface Participant {
+  id: string;
+  userId: number;
+  user: User;
+}
+
+interface Conversation {
+  id: string;
+  name?: string;
+  isGroup: boolean;
+  createdAt: string;
+  updatedAt: string;
+  participants: Participant[];
 }
 
 interface ChatWindowProps {
@@ -29,23 +59,23 @@ interface ChatWindowProps {
 }
 
 export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: messages = [], isLoading: loading } = useQuery({
+  const { data: messages = [], isLoading: messagesLoading, error: messagesError } = useQuery({
     queryKey: ['/api/conversations', conversationId, 'messages'],
     enabled: !!conversationId && !!user,
-    refetchInterval: 3000, // Refresh every 3 seconds to reduce load
+    refetchInterval: 2000,
     refetchOnWindowFocus: true,
-    staleTime: 1000, // Consider data stale after 1 second
+    staleTime: 500,
   });
 
-  const { data: conversation } = useQuery({
+  const { data: conversation, isLoading: conversationLoading, error: conversationError } = useQuery({
     queryKey: ['/api/conversations', conversationId, 'details'],
     enabled: !!conversationId && !!user,
+    staleTime: 30000,
   });
 
   const sendMessageMutation = useMutation({
@@ -58,25 +88,16 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
 
       return apiRequest(`/api/conversations/${conversationId}/messages`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
+        body: {
           content: content.trim(),
           messageType: 'text' 
-        }),
+        },
       });
     },
     onSuccess: (newMessage) => {
       console.log('Message sent successfully:', newMessage);
-      // Immediately refresh messages to show sent message
       queryClient.invalidateQueries({ queryKey: ['/api/conversations', conversationId, 'messages'] });
       queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
-
-      // Force a refetch after a short delay to ensure we get the latest data
-      setTimeout(() => {
-        queryClient.refetchQueries({ queryKey: ['/api/conversations', conversationId, 'messages'] });
-      }, 500);
     },
     onError: (error: any) => {
       console.error('Send message error:', error);
@@ -101,26 +122,29 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
   };
 
   const getConversationName = () => {
-    if (!conversation) return 'Chat';
+    if (!conversation) return 'Loading...';
     if (conversation.name) return conversation.name;
 
     if (conversation.isGroup) {
       return conversation.participants
-        ?.map((p: any) => p.fullName || p.username)
+        ?.map((p: Participant) => p.user?.profile?.fullName || p.user?.profile?.username || 'Unknown User')
         .join(', ') || 'Group Chat';
     }
 
-    const otherParticipant = conversation.participants?.find((p: any) => p.userId !== user?.id);
-    return otherParticipant?.fullName || otherParticipant?.username || 'Unknown User';
+    const otherParticipant = conversation.participants?.find((p: Participant) => p.userId !== user?.id);
+    if (otherParticipant?.user?.profile) {
+      return otherParticipant.user.profile.fullName || otherParticipant.user.profile.username || 'Unknown User';
+    }
+    return 'Unknown User';
   };
 
   const getConversationAvatar = () => {
     if (!conversation) return null;
-    if (conversation.avatarUrl) return conversation.avatarUrl;
+    if (conversation.name && conversation.isGroup) return null;
 
     if (!conversation.isGroup) {
-      const otherParticipant = conversation.participants?.find((p: any) => p.userId !== user?.id);
-      return otherParticipant?.avatarUrl;
+      const otherParticipant = conversation.participants?.find((p: Participant) => p.userId !== user?.id);
+      return otherParticipant?.user?.profile?.avatarUrl || null;
     }
 
     return null;
@@ -137,6 +161,7 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
   };
 
   const getInitials = (name: string) => {
+    if (!name || name === 'Unknown User') return 'U';
     return name
       .split(' ')
       .map((n) => n[0])
@@ -145,16 +170,34 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
       .slice(0, 2);
   };
 
-  if (loading) {
+  if (messagesLoading || conversationLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading messages...</p>
+          <p className="text-muted-foreground">Loading conversation...</p>
         </div>
       </div>
     );
   }
+
+  if (messagesError || conversationError) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">Failed to load conversation</p>
+          <Button onClick={() => {
+            queryClient.invalidateQueries({ queryKey: ['/api/conversations', conversationId, 'messages'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/conversations', conversationId, 'details'] });
+          }}>
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const conversationName = getConversationName();
 
   return (
     <div className="flex flex-col h-full">
@@ -164,11 +207,11 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
           <Avatar className="h-10 w-10">
             <AvatarImage src={getConversationAvatar()} />
             <AvatarFallback className="bg-primary text-primary-foreground">
-              {getInitials(getConversationName())}
+              {getInitials(conversationName)}
             </AvatarFallback>
           </Avatar>
           <div>
-            <h3 className="font-semibold">{getConversationName()}</h3>
+            <h3 className="font-semibold">{conversationName}</h3>
             <p className="text-sm text-muted-foreground">{getParticipantsText()}</p>
           </div>
         </div>
@@ -217,10 +260,10 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
 
       {/* Message Input */}
       <MessageInput 
-          onSendMessage={handleSendMessage} 
-          disabled={sendMessageMutation.isPending}
-          conversationId={conversationId}
-        />
+        onSendMessage={handleSendMessage} 
+        disabled={sendMessageMutation.isPending}
+        conversationId={conversationId}
+      />
     </div>
   );
 };

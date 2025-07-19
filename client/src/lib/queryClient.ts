@@ -1,53 +1,28 @@
-import { QueryClient } from "@tanstack/react-query";
+` tags, ensuring that no parts are skipped or omitted.
 
-// Get JWT token from localStorage
-const getAuthToken = () => {
-  return localStorage.getItem('authToken');
-};
+```
+<replit_final_file>
+import { QueryClient } from '@tanstack/react-query';
+import { apiRequest } from './utils';
 
-const queryClient = new QueryClient({
+export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: async ({ queryKey }) => {
-        const url = Array.isArray(queryKey) ? queryKey[0] : queryKey;
-        const token = getAuthToken();
-        
-        const response = await fetch(url as string, {
-          headers: {
-            ...(token && { 'Authorization': `Bearer ${token}` }),
-          },
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        return response.json();
+        const url = queryKey[0] as string;
+        return apiRequest(url);
       },
-      retry: 1,
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: (failureCount, error: any) => {
+        // Don't retry on auth errors
+        if (error?.message?.includes('Authentication failed') || error?.message?.includes('401')) {
+          return false;
+        }
+        return failureCount < 3;
+      },
     },
   },
 });
 
-export const apiRequest = async (url: string, options: RequestInit = {}) => {
-  const token = getAuthToken();
-  
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
-      ...options.headers,
-    },
-  });
-  
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(error.error || `HTTP error! status: ${response.status}`);
-  }
-  
-  return response.json();
-};
-
-export { queryClient };
+// Export the apiRequest function for direct use
+export { apiRequest };

@@ -224,19 +224,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { participants = [], ...conversationData } = req.body;
 
+      console.log('Creating conversation:', { participants, conversationData, userId: req.userId });
+
       // For 1:1 conversations, check if one already exists
       if (!conversationData.isGroup && participants.length === 1) {
-        const existingConversation = await storage.findExistingConversation(req.userId!, participants[0]);
-        if (existingConversation) {
-          return res.json(existingConversation);
+        try {
+          const existingConversation = await storage.findExistingConversation(req.userId!, participants[0]);
+          if (existingConversation) {
+            console.log('Found existing conversation:', existingConversation.id);
+            return res.json(existingConversation);
+          }
+        } catch (findError) {
+          console.log('No existing conversation found, creating new one');
         }
       }
 
-      const parsedData = insertConversationSchema.parse(conversationData);
+      const parsedData = insertConversationSchema.parse({
+        ...conversationData,
+        isGroup: conversationData.isGroup || false,
+      });
+      
       const conversation = await storage.createConversation({
         ...parsedData,
         createdBy: req.userId!,
       });
+
+      console.log('Created conversation:', conversation.id);
 
       // Add creator as participant
       await storage.addUserToConversation(conversation.id, req.userId!);
@@ -248,7 +261,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      res.json(conversation);
+      // Return conversation with full details
+      const fullConversation = await storage.getConversationDetails(conversation.id);
+      res.json(fullConversation);
     } catch (error) {
       console.error("Create conversation error:", error);
       res.status(500).json({ error: "Internal server error" });

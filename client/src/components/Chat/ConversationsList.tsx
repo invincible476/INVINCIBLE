@@ -60,25 +60,29 @@ export const ConversationsList = ({
 
   const getConversationName = (conversation: Conversation) => {
     if (conversation.name) return conversation.name;
-    
+
     if (conversation.isGroup) {
-      return conversation.participants
-        ?.map((p) => p.fullName || p.username)
-        .join(', ') || 'Group Chat';
+      const names = conversation.participants
+        ?.filter(p => p.userId !== user?.id)
+        ?.map((p) => p.user?.profile?.fullName || p.user?.profile?.username || 'Unknown User')
+        .join(', ');
+      return names || 'Group Chat';
     }
-    
-    const otherParticipant = conversation.participants?.find((p) => p.userId !== user?.id);
-    return otherParticipant?.fullName || otherParticipant?.username || 'Unknown User';
+
+    const otherParticipant = conversation.participants?.find(p => p.userId !== user?.id);
+    if (otherParticipant?.user?.profile) {
+      return otherParticipant.user.profile.fullName || 
+             otherParticipant.user.profile.username || 
+             'Unknown User';
+    }
+    return 'Unknown User';
   };
 
   const getConversationAvatar = (conversation: Conversation) => {
-    if (conversation.avatarUrl) return conversation.avatarUrl;
-    
     if (!conversation.isGroup) {
-      const otherParticipant = conversation.participants?.find((p) => p.userId !== user?.id);
-      return otherParticipant?.avatarUrl;
+      const otherParticipant = conversation.participants?.find(p => p.userId !== user?.id);
+      return otherParticipant?.user?.profile?.avatarUrl || null;
     }
-    
     return null;
   };
 
@@ -121,7 +125,7 @@ export const ConversationsList = ({
           <h2 className="font-semibold text-chat-sidebar-foreground">Conversations</h2>
           <CreateConversationDialog onConversationCreated={onSelectConversation} />
         </div>
-        
+
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
