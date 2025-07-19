@@ -30,11 +30,22 @@ export function useAuth() {
     queryKey: ['auth'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/user', {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          throw new Error('No token found');
+        }
+
+        const response = await fetch('/api/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
           credentials: 'include',
         });
 
         if (!response.ok) {
+          if (response.status === 401) {
+            localStorage.removeItem('authToken');
+          }
           throw new Error('Not authenticated');
         }
 
@@ -43,6 +54,7 @@ export function useAuth() {
         return data;
       } catch (error) {
         console.log('Auth check error:', error);
+        localStorage.removeItem('authToken');
         throw error;
       }
     },
@@ -71,7 +83,17 @@ export function useAuth() {
       return response.json();
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(['auth'], data);
+      if (data.token) {
+        localStorage.setItem('authToken', data.token);
+      }
+      
+      // Get profile data for the full auth data
+      const authData = {
+        user: data.user,
+        profile: data.profile // This should come from the server
+      };
+      
+      queryClient.setQueryData(['auth'], authData);
       queryClient.invalidateQueries({ queryKey: ['auth'] });
       toast.success('Signed in successfully');
     },
@@ -104,7 +126,17 @@ export function useAuth() {
       return response.json();
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(['auth'], data);
+      if (data.token) {
+        localStorage.setItem('authToken', data.token);
+      }
+      
+      // Get profile data for the full auth data
+      const authData = {
+        user: data.user,
+        profile: data.profile // This should come from the server
+      };
+      
+      queryClient.setQueryData(['auth'], authData);
       queryClient.invalidateQueries({ queryKey: ['auth'] });
       toast.success('Account created successfully');
     },
@@ -125,6 +157,7 @@ export function useAuth() {
       }
     },
     onSuccess: () => {
+      localStorage.removeItem('authToken');
       queryClient.setQueryData(['auth'], null);
       queryClient.clear();
       toast.success('Signed out successfully');
