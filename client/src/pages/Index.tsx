@@ -1,6 +1,5 @@
 
 import { useAuth } from '@/hooks/useAuth';
-import { useQuery } from '@tanstack/react-query';
 import { AuthForm } from '@/components/Auth/AuthForm';
 import { ChatLayout } from '@/components/Chat/ChatLayout';
 

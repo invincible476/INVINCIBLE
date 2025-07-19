@@ -38,10 +38,7 @@ export const useAuth = () => {
 
         // Return the user data in the correct format
         if (data && data.user && data.profile) {
-          return {
-            user: data.user,
-            profile: data.profile
-          };
+          return data.user; // Return just the user object
         }
 
         return null;
@@ -135,9 +132,33 @@ export const useAuth = () => {
     }
   };
 
+  // Separate profile query
+  const profileQuery = useQuery({
+    queryKey: ['/api/profile'],
+    queryFn: async (): Promise<Profile | null> => {
+      if (!query.data) return null;
+      
+      try {
+        const response = await fetch('/api/user', {
+          credentials: 'include',
+        });
+
+        if (!response.ok) return null;
+
+        const data = await response.json();
+        return data.profile || null;
+      } catch (error) {
+        return null;
+      }
+    },
+    enabled: !!query.data,
+    retry: false,
+  });
+
   return {
     ...query,
     user: query.data,
+    profile: profileQuery.data,
     signIn,
     signUp,
     signOut,
