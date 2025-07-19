@@ -26,9 +26,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+      console.log("Auth middleware - Token valid for user:", decoded.userId);
       req.userId = decoded.userId;
       next();
     } catch (error) {
+      console.error("Auth middleware - Invalid token:", error);
       return res.status(401).json({ error: "Invalid token" });
     }
   };
@@ -175,8 +177,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         profile 
       });
     } catch (error) {
-      console.error("Get user error:", error);
-      return res.status(401).json({ error: "Invalid token" });
+      console.error("Auth check error:", error);
+      res.status(401).json({ error: "Invalid token" });
     }
   });
 

@@ -6,19 +6,17 @@ import { ChatWindow } from './ChatWindow';
 import { ContactsList } from './ContactsList';
 import { ProfileSettings } from './ProfileSettings';
 import { WelcomeMessage } from './WelcomeMessage';
-import { DemoDataSetup } from './DemoDataSetup';
 import { UserDiscovery } from './UserDiscovery';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { LogOut, MessageSquare, Users, Settings } from 'lucide-react';
+import { LogOut, MessageSquare, Users, Settings, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type ActiveView = 'chat' | 'contacts' | 'discover' | 'settings';
 
 export const ChatLayout = () => {
-  const [activeView, setActiveView] = useState<ActiveView>('chat');
+  const [activeView, setActiveView] = useState<ActiveView>('discover');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
-  const [showDemo, setShowDemo] = useState(false);
   const { user, signOut } = useAuth();
 
   const handleSignOut = async () => {
@@ -40,10 +38,6 @@ export const ChatLayout = () => {
 
   const hasData = conversations.length > 0 || contacts.length > 0;
   const isLoading = conversationsLoading || contactsLoading;
-
-  // If no conversations selected but we have the interface showing, 
-  // show a welcome message in the main area
-  const showWelcomeMessage = !selectedConversationId && !hasData;
 
   return (
     <div className="flex h-screen bg-background">
@@ -67,7 +61,7 @@ export const ChatLayout = () => {
         </div>
 
         {/* Navigation */}
-        <div className="grid grid-cols-2 border-b border-border">
+        <div className="grid grid-cols-4 border-b border-border">
           <Button
             variant="ghost"
             className={cn(
@@ -89,6 +83,28 @@ export const ChatLayout = () => {
           >
             <Users className="h-4 w-4 mr-2" />
             Contacts
+          </Button>
+          <Button
+            variant="ghost"
+            className={cn(
+              "rounded-none text-chat-sidebar-foreground hover:bg-chat-sidebar-hover",
+              activeView === 'discover' && "bg-chat-sidebar-hover"
+            )}
+            onClick={() => setActiveView('discover')}
+          >
+            <Search className="h-4 w-4 mr-2" />
+            Discover
+          </Button>
+          <Button
+            variant="ghost"
+            className={cn(
+              "rounded-none text-chat-sidebar-foreground hover:bg-chat-sidebar-hover",
+              activeView === 'settings' && "bg-chat-sidebar-hover"
+            )}
+            onClick={() => setActiveView('settings')}
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Settings
           </Button>
           <Button
             variant="ghost"
@@ -148,8 +164,8 @@ export const ChatLayout = () => {
       <div className="flex-1 flex flex-col">
         {selectedConversationId ? (
           <ChatWindow conversationId={selectedConversationId} />
-        ) : showWelcomeMessage ? (
-          <DemoDataSetup />
+        ) : activeView === 'discover' ? (
+          <WelcomeMessage />
         ) : (
           <div className="flex-1 flex items-center justify-center bg-muted/30">
             <div className="text-center">
