@@ -34,14 +34,22 @@ export const useAuth = () => {
     try {
       const response = await apiRequest('/api/auth/me');
       
-      setUser(response.user);
-      setProfile(response.profile);
-      setLoading(false);
+      if (response.user) {
+        setUser(response.user);
+        setProfile(response.profile);
+      } else {
+        // Clear invalid token
+        localStorage.removeItem('authToken');
+        setUser(null);
+        setProfile(null);
+      }
     } catch (error) {
+      console.log('Auth check failed:', error);
       // User is not authenticated
       localStorage.removeItem('authToken');
       setUser(null);
       setProfile(null);
+    } finally {
       setLoading(false);
     }
   };

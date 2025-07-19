@@ -6,6 +6,7 @@ import { ChatWindow } from './ChatWindow';
 import { ContactsList } from './ContactsList';
 import { ProfileSettings } from './ProfileSettings';
 import { WelcomeMessage } from './WelcomeMessage';
+import { DemoDataSetup } from './DemoDataSetup';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { LogOut, MessageSquare, Users, Settings } from 'lucide-react';
@@ -27,13 +28,13 @@ export const ChatLayout = () => {
   const { data: conversations = [], isLoading: conversationsLoading } = useQuery({
     queryKey: ['/api/conversations'],
     enabled: !!user,
-    refetchInterval: 2000, // Refresh every 2 seconds to show new data
+    refetchInterval: 5000, // Refresh every 5 seconds for real-time updates
   });
 
   const { data: contacts = [], isLoading: contactsLoading } = useQuery({
     queryKey: ['/api/contacts'],
     enabled: !!user,
-    refetchInterval: 2000, // Refresh every 2 seconds to show new data
+    refetchInterval: 10000, // Refresh every 10 seconds
   });
 
   const hasData = conversations.length > 0 || contacts.length > 0;
@@ -111,14 +112,10 @@ export const ChatLayout = () => {
           )}
           {activeView === 'contacts' && (
             <ContactsList 
-              onStartConversation={(contactId) => {
-                // Switch to chat view when conversation is started
+              onStartConversation={(conversationId) => {
+                // Switch to chat view and select the conversation
                 setActiveView('chat');
-                // Conversations list will refresh and show the new conversation
-                setTimeout(() => {
-                  // Refresh conversations to pick up newly created one
-                  window.location.reload();
-                }, 1000);
+                setSelectedConversationId(conversationId);
               }}
             />
           )}
@@ -131,7 +128,7 @@ export const ChatLayout = () => {
         {selectedConversationId ? (
           <ChatWindow conversationId={selectedConversationId} />
         ) : showWelcomeMessage ? (
-          <WelcomeMessage />
+          <DemoDataSetup />
         ) : (
           <div className="flex-1 flex items-center justify-center bg-muted/30">
             <div className="text-center">

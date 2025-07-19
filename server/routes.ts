@@ -149,11 +149,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
       const user = await storage.getUserById(decoded.userId);
-      const profile = await storage.getProfileByUserId(decoded.userId);
       
       if (!user) {
-        return res.status(404).json({ error: "User not found" });
+        return res.status(401).json({ error: "User not found" });
       }
+      
+      const profile = await storage.getProfileByUserId(decoded.userId);
       
       res.json({ 
         user: { 
@@ -164,7 +165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Get user error:", error);
-      res.status(500).json({ error: "Internal server error" });
+      return res.status(401).json({ error: "Invalid token" });
     }
   });
 

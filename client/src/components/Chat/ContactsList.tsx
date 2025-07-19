@@ -25,7 +25,7 @@ interface Contact {
 }
 
 interface ContactsListProps {
-  onStartConversation?: (contactId: number) => void;
+  onStartConversation?: (conversationId: string) => void;
 }
 
 export const ContactsList = ({ onStartConversation }: ContactsListProps) => {
@@ -103,10 +103,10 @@ export const ContactsList = ({ onStartConversation }: ContactsListProps) => {
         }),
       });
     },
-    onSuccess: (conversation, contactId) => {
+    onSuccess: (conversation) => {
       queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
       if (onStartConversation) {
-        onStartConversation(contactId);
+        onStartConversation(conversation.id);
       }
       toast({
         title: 'Success',

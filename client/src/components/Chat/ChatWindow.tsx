@@ -3,13 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Phone, Video, MoreVertical } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Phone, Video, MoreVertical } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { MessageInput } from './MessageInput';
+import { MessageBubble } from './MessageBubble';
 
 interface Message {
   id: string;
@@ -30,8 +29,7 @@ interface ChatWindowProps {
 }
 
 export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
-  const [newMessage, setNewMessage] = useState('');
-  const [sending, setSending] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -56,8 +54,9 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
       });
     },
     onSuccess: () => {
+      // Refresh both messages and conversations
       queryClient.invalidateQueries({ queryKey: ['/api/conversations', conversationId, 'messages'] });
-      setNewMessage('');
+      queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
     },
     onError: (error: any) => {
       toast({
@@ -76,16 +75,8 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || sending) return;
-
-    setSending(true);
-    try {
-      await sendMessageMutation.mutateAsync(newMessage.trim());
-    } finally {
-      setSending(false);
-    }
+  const handleSendMessage = async (content: string) => {
+    await sendMessageMutation.mutateAsync(content);
   };
 
   const getConversationName = () => {
@@ -175,55 +166,36 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
 
       {/* Messages */}
       <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4">
+        <div className="space-y-2">
           {messages.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground">No messages yet. Start the conversation!</p>
             </div>
           ) : (
-            messages.map((message: Message) => (
-              <div
-                key={message.id}
-                className={cn(
-                  "flex",
-                  message.senderId === user?.id ? "justify-end" : "justify-start"
-                )}
-              >
-                <div
-                  className={cn(
-                    "max-w-[70%] rounded-lg p-3",
-                    message.senderId === user?.id
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
-                  )}
-                >
-                  <p className="text-sm">{message.content}</p>
-                  <p className="text-xs opacity-70 mt-1">
-                    {format(new Date(message.createdAt), 'HH:mm')}
-                  </p>
-                </div>
-              </div>
-            ))
+            messages.map((message: Message, index) => {
+              const isOwnMessage = message.senderId === user?.id;
+              const prevMessage = index > 0 ? messages[index - 1] : null;
+              const showAvatar = !prevMessage || prevMessage.senderId !== message.senderId;
+              
+              return (
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  isOwnMessage={isOwnMessage}
+                  showAvatar={showAvatar}
+                />
+              );
+            })
           )}
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
 
       {/* Message Input */}
-      <div className="border-t border-border p-4">
-        <form onSubmit={handleSendMessage} className="flex space-x-2">
-          <Input
-            placeholder="Type a message..."
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            disabled={sending}
-            className="flex-1"
-          />
-          <Button type="submit" disabled={!newMessage.trim() || sending}>
-            <Send className="h-4 w-4" />
-          </Button>
-        </form>
-      </div>
+      <MessageInput 
+        onSendMessage={handleSendMessage}
+        disabled={sendMessageMutation.isPending}
+      />
     </div>
   );
 };
