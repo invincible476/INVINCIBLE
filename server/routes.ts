@@ -349,23 +349,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/contacts", requireAuth, async (req, res) => {
     try {
-      const contactData = insertContactSchema.parse(req.body);
+      const { contactId } = req.body;
+      
+      if (!contactId || typeof contactId !== 'number') {
+        return res.status(400).json({ error: "Contact ID is required and must be a number" });
+      }
       
       // Check if contact already exists
-      const existingContact = await storage.getExistingContact(req.userId!, contactData.contactId);
+      const existingContact = await storage.getExistingContact(req.userId!, contactId);
       if (existingContact) {
         return res.status(400).json({ error: "Contact already exists" });
       }
       
       // Check if user is trying to add themselves
-      if (req.userId === contactData.contactId) {
+      if (req.userId === contactId) {
         return res.status(400).json({ error: "Cannot add yourself as a contact" });
       }
       
-      const contact = await storage.createContact({
-        ...contactData,
+      // Create contact data object
+      const contactData = {
         userId: req.userId!,
-      });
+        contactId,
+        status: "accepted"
+      };
+      
+      const contact = await storage.createContact(contactData);
       res.json(contact);
     } catch (error) {
       console.error("Create contact error:", error);
