@@ -38,7 +38,7 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
   const { data: messages = [], isLoading: loading } = useQuery({
     queryKey: ['/api/conversations', conversationId, 'messages'],
     enabled: !!conversationId && !!user,
-    refetchInterval: 3000, // Refresh every 3 seconds for real-time feel
+    refetchInterval: 1000, // Refresh every 1 second for better real-time feel
   });
 
   const { data: conversation } = useQuery({
@@ -50,18 +50,29 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
     mutationFn: async (content: string) => {
       return apiRequest(`/api/conversations/${conversationId}/messages`, {
         method: 'POST',
-        body: JSON.stringify({ content }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          content: content.trim(),
+          messageType: 'text' 
+        }),
       });
     },
     onSuccess: () => {
-      // Refresh both messages and conversations
+      // Immediately refresh messages to show sent message
       queryClient.invalidateQueries({ queryKey: ['/api/conversations', conversationId, 'messages'] });
       queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
+      toast({
+        title: 'Message sent',
+        description: 'Your message has been sent successfully',
+      });
     },
     onError: (error: any) => {
+      console.error('Send message error:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to send message',
+        title: 'Failed to send message',
+        description: error.message || 'Please try again',
         variant: 'destructive',
       });
     },

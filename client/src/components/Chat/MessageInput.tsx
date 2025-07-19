@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Send, Smile, Paperclip } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Send, Paperclip, Smile } from 'lucide-react';
 
 interface MessageInputProps {
   onSendMessage: (content: string) => Promise<void>;
@@ -36,7 +36,7 @@ export const MessageInput = ({ onSendMessage, disabled }: MessageInputProps) => 
     <div className="border-t border-border p-4 bg-background">
       <form onSubmit={handleSubmit} className="flex items-center space-x-2">
         <div className="flex-1 relative">
-          <Input
+          <Textarea
             placeholder="Type a message..."
             value={message}
             onChange={(e) => setMessage(e.target.value)}

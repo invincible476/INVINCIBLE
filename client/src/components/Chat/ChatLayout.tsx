@@ -27,17 +27,24 @@ export const ChatLayout = () => {
   const { data: conversations = [], isLoading: conversationsLoading } = useQuery({
     queryKey: ['/api/conversations'],
     enabled: !!user,
-    refetchInterval: 5000, // Refresh every 5 seconds for real-time updates
+    refetchInterval: 3000, // Refresh every 3 seconds for real-time updates
   });
 
   const { data: contacts = [], isLoading: contactsLoading } = useQuery({
     queryKey: ['/api/contacts'],
     enabled: !!user,
-    refetchInterval: 10000, // Refresh every 10 seconds
+    refetchInterval: 5000, // Refresh every 5 seconds
   });
 
   const hasData = conversations.length > 0 || contacts.length > 0;
   const isLoading = conversationsLoading || contactsLoading;
+
+  // Auto-switch to discover view if no conversations exist
+  useEffect(() => {
+    if (!isLoading && !hasData && activeView === 'chat') {
+      setActiveView('discover');
+    }
+  }, [isLoading, hasData, activeView]);
 
   return (
     <div className="flex h-screen bg-background">
@@ -165,17 +172,27 @@ export const ChatLayout = () => {
         {selectedConversationId ? (
           <ChatWindow conversationId={selectedConversationId} />
         ) : activeView === 'discover' ? (
-          <WelcomeMessage />
+          <UserDiscovery onStartConversation={setSelectedConversationId} />
+        ) : activeView === 'contacts' ? (
+          <ContactsList onStartConversation={setSelectedConversationId} />
+        ) : activeView === 'settings' ? (
+          <ProfileSettings />
         ) : (
           <div className="flex-1 flex items-center justify-center bg-muted/30">
-            <div className="text-center">
+            <div className="text-center space-y-4">
               <MessageSquare className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
               <h2 className="text-xl font-semibold text-muted-foreground mb-2">
-                Select a conversation
+                Welcome to Chat Rescuer
               </h2>
-              <p className="text-muted-foreground">
-                Choose a conversation from the sidebar to start chatting
+              <p className="text-muted-foreground mb-4">
+                {hasData ? 'Select a conversation from the sidebar to start chatting' : 'Discover users to start your first conversation'}
               </p>
+              {!hasData && (
+                <Button onClick={() => setActiveView('discover')} className="mt-4">
+                  <Search className="h-4 w-4 mr-2" />
+                  Discover Users
+                </Button>
+              )}
             </div>
           </div>
         )}

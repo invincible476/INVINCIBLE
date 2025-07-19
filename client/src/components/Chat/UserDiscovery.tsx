@@ -214,15 +214,26 @@ export const UserDiscovery = ({ onStartConversation }: UserDiscoveryProps) => {
 
                       <div className="flex items-center space-x-2">
                         {!isContact ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleAddContact(otherUser.id)}
-                            disabled={addContactMutation.isPending}
-                          >
-                            <UserPlus className="h-4 w-4 mr-1" />
-                            Add
-                          </Button>
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleStartConversation(otherUser.id)}
+                              disabled={startConversationMutation.isPending}
+                            >
+                              <MessageSquare className="h-4 w-4 mr-1" />
+                              Chat
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleAddContact(otherUser.id)}
+                              disabled={addContactMutation.isPending}
+                            >
+                              <UserPlus className="h-4 w-4 mr-1" />
+                              Add
+                            </Button>
+                          </>
                         ) : (
                           <Button
                             variant="default"
