@@ -240,7 +240,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const user = await storage.getUserById(parsedUserId);
-        
+
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -275,12 +275,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/conversations", requireAuth, async (req, res) => {
     try {
       const conversations = await storage.getConversationsByUserId(req.userId!);
-      
+
       const conversationsWithDetails = await Promise.all(
         conversations.map(async (conv) => {
           // Get participants with profiles
           const participantData = await storage.getConversationParticipants(conv.id)
-          
+
           // Get last message with sender profile
           const lastMessage = await storage.getLastMessageWithSenderProfile(conv.id);
 

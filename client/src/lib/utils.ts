@@ -1,14 +1,15 @@
-import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
+
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
 // API request utility function
 export const apiRequest = async (url: string, options: RequestInit = {}) => {
   const token = localStorage.getItem('authToken');
-
+  
   const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',
   };
@@ -39,6 +40,6 @@ export const apiRequest = async (url: string, options: RequestInit = {}) => {
   if (contentType && contentType.includes('application/json')) {
     return response.json();
   }
-
+  
   return response.text();
 };
