@@ -46,6 +46,8 @@ export const useAuth = () => {
   const checkAuthStatus = async () => {
     const token = localStorage.getItem('authToken');
     if (!token) {
+      setUser(null);
+      setProfile(null);
       setLoading(false);
       return;
     }
@@ -59,9 +61,11 @@ export const useAuth = () => {
       
       if (response.ok) {
         const data = await response.json();
+        console.log('Auth check successful:', data);
         setUser(data.user);
         setProfile(data.profile);
       } else {
+        console.log('Auth check failed - invalid token');
         // Clear invalid token
         localStorage.removeItem('authToken');
         setUser(null);
@@ -100,8 +104,14 @@ export const useAuth = () => {
       // Store JWT token in localStorage
       if (data.token) {
         localStorage.setItem('authToken', data.token);
+        
+        // Set user and profile immediately from signup response
         setUser(data.user);
-        // Fetch profile after signup
+        if (data.profile) {
+          setProfile(data.profile);
+        }
+        
+        // Fetch the latest auth status to ensure consistency
         await checkAuthStatus();
       }
       
@@ -135,8 +145,14 @@ export const useAuth = () => {
       // Store JWT token in localStorage
       if (data.token) {
         localStorage.setItem('authToken', data.token);
+        
+        // Set user and profile immediately from login response
         setUser(data.user);
-        // Fetch full auth data including profile
+        if (data.profile) {
+          setProfile(data.profile);
+        }
+        
+        // Also fetch the latest auth status to ensure consistency
         await checkAuthStatus();
       }
       
