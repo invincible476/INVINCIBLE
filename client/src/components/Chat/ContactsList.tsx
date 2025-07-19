@@ -24,7 +24,11 @@ interface Contact {
   };
 }
 
-export const ContactsList = () => {
+interface ContactsListProps {
+  onStartConversation?: (contactId: number) => void;
+}
+
+export const ContactsList = ({ onStartConversation }: ContactsListProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [newContactEmail, setNewContactEmail] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -66,10 +70,60 @@ export const ContactsList = () => {
     e.preventDefault();
     if (!newContactEmail.trim()) return;
 
-    // For demo purposes, we'll just add a mock contact
-    // In a real app, you'd search for the user by email first
-    const mockContactId = Math.floor(Math.random() * 1000) + 100;
-    await addContactMutation.mutateAsync({ contactId: mockContactId });
+    try {
+      // First search for user by email
+      const searchResponse = await apiRequest(`/api/users/search?email=${encodeURIComponent(newContactEmail.trim())}`);
+      
+      if (!searchResponse.user) {
+        toast({
+          title: 'User not found',
+          description: 'No user found with that email address',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      await addContactMutation.mutateAsync({ contactId: searchResponse.user.id });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add contact',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const startConversationMutation = useMutation({
+    mutationFn: async (contactId: number) => {
+      return apiRequest('/api/conversations', {
+        method: 'POST',
+        body: JSON.stringify({
+          isGroup: false,
+          participants: [contactId],
+        }),
+      });
+    },
+    onSuccess: (conversation, contactId) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
+      if (onStartConversation) {
+        onStartConversation(contactId);
+      }
+      toast({
+        title: 'Success',
+        description: 'Conversation started',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to start conversation',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleStartConversation = async (contactId: number) => {
+    await startConversationMutation.mutateAsync(contactId);
   };
 
   const getInitials = (name: string) => {
@@ -181,7 +235,11 @@ export const ContactsList = () => {
                     @{contact.contactProfile?.username || 'unknown'}
                   </p>
                 </div>
-                <Button variant="ghost" size="sm">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => handleStartConversation(contact.contactId)}
+                >
                   <MessageSquare className="h-4 w-4" />
                 </Button>
               </div>

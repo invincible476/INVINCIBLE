@@ -81,7 +81,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } catch (profileError) {
         // If profile creation fails, clean up the user
-        await storage.deleteUser(user.id);
+        try {
+          await storage.deleteUser(user.id);
+        } catch (cleanupError) {
+          console.error("Error cleaning up user:", cleanupError);
+        }
         throw profileError;
       }
       
@@ -199,14 +203,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/conversations", requireAuth, async (req, res) => {
     try {
-      const conversationData = insertConversationSchema.parse(req.body);
+      const { participants = [], ...conversationData } = req.body;
+      
+      // For 1:1 conversations, check if one already exists
+      if (!conversationData.isGroup && participants.length === 1) {
+        const existingConversation = await storage.findExistingConversation(req.userId!, participants[0]);
+        if (existingConversation) {
+          return res.json(existingConversation);
+        }
+      }
+      
+      const parsedData = insertConversationSchema.parse(conversationData);
       const conversation = await storage.createConversation({
-        ...conversationData,
+        ...parsedData,
         createdBy: req.userId!,
       });
       
       // Add creator as participant
       await storage.addUserToConversation(conversation.id, req.userId!);
+      
+      // Add other participants
+      for (const participantId of participants) {
+        if (participantId !== req.userId) {
+          await storage.addUserToConversation(conversation.id, participantId);
+        }
+      }
       
       res.json(conversation);
     } catch (error) {
@@ -223,6 +244,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(messages);
     } catch (error) {
       console.error("Get messages error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/conversations/:id/details", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const conversation = await storage.getConversationDetails(id);
+      if (!conversation) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
+      res.json(conversation);
+    } catch (error) {
+      console.error("Get conversation details error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
@@ -259,9 +294,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User search route
+  app.get("/api/users/search", requireAuth, async (req, res) => {
+    try {
+      const { email } = req.query;
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ error: "Email parameter is required" });
+      }
+      
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      const profile = await storage.getProfileByUserId(user.id);
+      
+      res.json({ 
+        user: { 
+          id: user.id, 
+          email: user.email 
+        },
+        profile 
+      });
+    } catch (error) {
+      console.error("Search user error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   app.post("/api/contacts", requireAuth, async (req, res) => {
     try {
       const contactData = insertContactSchema.parse(req.body);
+      
+      // Check if contact already exists
+      const existingContact = await storage.getExistingContact(req.userId!, contactData.contactId);
+      if (existingContact) {
+        return res.status(400).json({ error: "Contact already exists" });
+      }
+      
+      // Check if user is trying to add themselves
+      if (req.userId === contactData.contactId) {
+        return res.status(400).json({ error: "Cannot add yourself as a contact" });
+      }
+      
       const contact = await storage.createContact({
         ...contactData,
         userId: req.userId!,

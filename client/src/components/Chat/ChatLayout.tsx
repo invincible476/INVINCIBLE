@@ -109,7 +109,19 @@ export const ChatLayout = () => {
               onSelectConversation={setSelectedConversationId}
             />
           )}
-          {activeView === 'contacts' && <ContactsList />}
+          {activeView === 'contacts' && (
+            <ContactsList 
+              onStartConversation={(contactId) => {
+                // Switch to chat view when conversation is started
+                setActiveView('chat');
+                // Conversations list will refresh and show the new conversation
+                setTimeout(() => {
+                  // Refresh conversations to pick up newly created one
+                  window.location.reload();
+                }, 1000);
+              }}
+            />
+          )}
           {activeView === 'settings' && <ProfileSettings />}
         </div>
       </div>

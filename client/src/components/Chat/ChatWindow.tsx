@@ -40,6 +40,12 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
   const { data: messages = [], isLoading: loading } = useQuery({
     queryKey: ['/api/conversations', conversationId, 'messages'],
     enabled: !!conversationId && !!user,
+    refetchInterval: 3000, // Refresh every 3 seconds for real-time feel
+  });
+
+  const { data: conversation } = useQuery({
+    queryKey: ['/api/conversations', conversationId, 'details'],
+    enabled: !!conversationId && !!user,
   });
 
   const sendMessageMutation = useMutation({
@@ -82,6 +88,42 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
     }
   };
 
+  const getConversationName = () => {
+    if (!conversation) return 'Chat';
+    if (conversation.name) return conversation.name;
+    
+    if (conversation.isGroup) {
+      return conversation.participants
+        ?.map((p: any) => p.fullName || p.username)
+        .join(', ') || 'Group Chat';
+    }
+    
+    const otherParticipant = conversation.participants?.find((p: any) => p.userId !== user?.id);
+    return otherParticipant?.fullName || otherParticipant?.username || 'Unknown User';
+  };
+
+  const getConversationAvatar = () => {
+    if (!conversation) return null;
+    if (conversation.avatarUrl) return conversation.avatarUrl;
+    
+    if (!conversation.isGroup) {
+      const otherParticipant = conversation.participants?.find((p: any) => p.userId !== user?.id);
+      return otherParticipant?.avatarUrl;
+    }
+    
+    return null;
+  };
+
+  const getParticipantsText = () => {
+    if (!conversation) return 'Loading...';
+    
+    if (conversation.isGroup) {
+      return `${conversation.participants?.length || 0} participants`;
+    }
+    
+    return 'Active now';
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -108,13 +150,14 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
       <div className="border-b border-border p-4 flex items-center justify-between bg-background">
         <div className="flex items-center space-x-3">
           <Avatar className="h-10 w-10">
+            <AvatarImage src={getConversationAvatar()} />
             <AvatarFallback className="bg-primary text-primary-foreground">
-              GC
+              {getInitials(getConversationName())}
             </AvatarFallback>
           </Avatar>
           <div>
-            <h3 className="font-semibold">Chat</h3>
-            <p className="text-sm text-muted-foreground">Active now</p>
+            <h3 className="font-semibold">{getConversationName()}</h3>
+            <p className="text-sm text-muted-foreground">{getParticipantsText()}</p>
           </div>
         </div>
         <div className="flex items-center space-x-2">

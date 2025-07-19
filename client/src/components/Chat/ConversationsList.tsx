@@ -8,23 +8,25 @@ import { Plus, Search, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { CreateConversationDialog } from './CreateConversationDialog';
 
 interface Conversation {
   id: string;
   name: string | null;
-  is_group: boolean;
-  avatar_url: string | null;
-  updated_at: string;
-  last_message?: {
+  isGroup: boolean;
+  avatarUrl: string | null;
+  updatedAt: string;
+  lastMessage?: {
     content: string;
-    created_at: string;
-    sender_id: string;
+    createdAt: string;
+    senderId: number;
   };
   participants?: {
     id: string;
-    full_name: string;
+    userId: number;
+    fullName: string;
     username: string;
-    avatar_url: string;
+    avatarUrl: string;
   }[];
 }
 
@@ -59,22 +61,22 @@ export const ConversationsList = ({
   const getConversationName = (conversation: Conversation) => {
     if (conversation.name) return conversation.name;
     
-    if (conversation.is_group) {
+    if (conversation.isGroup) {
       return conversation.participants
-        ?.map((p) => p.full_name || p.username)
+        ?.map((p) => p.fullName || p.username)
         .join(', ') || 'Group Chat';
     }
     
-    const otherParticipant = conversation.participants?.find((p) => p.id !== user?.id);
-    return otherParticipant?.full_name || otherParticipant?.username || 'Unknown User';
+    const otherParticipant = conversation.participants?.find((p) => p.userId !== user?.id);
+    return otherParticipant?.fullName || otherParticipant?.username || 'Unknown User';
   };
 
   const getConversationAvatar = (conversation: Conversation) => {
-    if (conversation.avatar_url) return conversation.avatar_url;
+    if (conversation.avatarUrl) return conversation.avatarUrl;
     
-    if (!conversation.is_group) {
-      const otherParticipant = conversation.participants?.find((p) => p.id !== user?.id);
-      return otherParticipant?.avatar_url;
+    if (!conversation.isGroup) {
+      const otherParticipant = conversation.participants?.find((p) => p.userId !== user?.id);
+      return otherParticipant?.avatarUrl;
     }
     
     return null;
@@ -113,8 +115,14 @@ export const ConversationsList = ({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Search */}
+      {/* Header with New Chat button */}
       <div className="p-4 border-b border-border">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-chat-sidebar-foreground">Conversations</h2>
+          <CreateConversationDialog onConversationCreated={onSelectConversation} />
+        </div>
+        
+        {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -157,15 +165,15 @@ export const ConversationsList = ({
                       <p className="font-medium text-chat-sidebar-foreground truncate">
                         {getConversationName(conversation)}
                       </p>
-                      {conversation.last_message && (
+                      {conversation.lastMessage && (
                         <span className="text-xs text-muted-foreground">
-                          {format(new Date(conversation.last_message.created_at), 'HH:mm')}
+                          {format(new Date(conversation.lastMessage.createdAt), 'HH:mm')}
                         </span>
                       )}
                     </div>
-                    {conversation.last_message && (
+                    {conversation.lastMessage && (
                       <p className="text-sm text-muted-foreground truncate">
-                        {conversation.last_message.content}
+                        {conversation.lastMessage.content}
                       </p>
                     )}
                   </div>

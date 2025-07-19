@@ -56,6 +56,9 @@ export interface IStorage {
   getConversationsByUserId(userId: number): Promise<any[]>;
   createConversation(conversation: InsertConversation): Promise<Conversation>;
   addUserToConversation(conversationId: string, userId: number): Promise<void>;
+  findExistingConversation(userId1: number, userId2: number): Promise<Conversation | undefined>;
+  getConversationDetails(conversationId: string): Promise<any | undefined>;
+  getConversationDetails(conversationId: string): Promise<any | undefined>;
 
   // Message methods
   getMessagesByConversationId(conversationId: string): Promise<any[]>;
@@ -64,6 +67,7 @@ export interface IStorage {
   // Contact methods
   getContactsByUserId(userId: number): Promise<any[]>;
   createContact(contact: InsertContact): Promise<Contact>;
+  getExistingContact(userId: number, contactId: number): Promise<Contact | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -177,6 +181,64 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  async findExistingConversation(userId1: number, userId2: number): Promise<Conversation | undefined> {
+    // Find conversations where both users are participants and it's not a group
+    const result = await db
+      .select({ conversation: conversations })
+      .from(conversations)
+      .innerJoin(conversationParticipants, eq(conversations.id, conversationParticipants.conversationId))
+      .where(
+        and(
+          eq(conversations.isGroup, false),
+          eq(conversationParticipants.userId, userId1)
+        )
+      );
+
+    for (const conv of result) {
+      // Check if the other user is also a participant
+      const otherParticipant = await db
+        .select()
+        .from(conversationParticipants)
+        .where(
+          and(
+            eq(conversationParticipants.conversationId, conv.conversation.id),
+            eq(conversationParticipants.userId, userId2)
+          )
+        );
+      
+      if (otherParticipant.length > 0) {
+        return conv.conversation;
+      }
+    }
+    
+    return undefined;
+  }
+
+  async getConversationDetails(conversationId: string): Promise<any | undefined> {
+    const conversation = await db
+      .select()
+      .from(conversations)
+      .where(eq(conversations.id, conversationId))
+      .limit(1);
+
+    if (conversation.length === 0) return undefined;
+
+    // Get participants
+    const participants = await db
+      .select({
+        profile: profiles,
+        participant: conversationParticipants,
+      })
+      .from(conversationParticipants)
+      .innerJoin(profiles, eq(conversationParticipants.userId, profiles.userId))
+      .where(eq(conversationParticipants.conversationId, conversationId));
+
+    return {
+      ...conversation[0],
+      participants: participants.map(p => p.profile),
+    };
+  }
+
   async getMessagesByConversationId(conversationId: string): Promise<any[]> {
     const result = await db
       .select({
@@ -217,6 +279,14 @@ export class DatabaseStorage implements IStorage {
 
   async createContact(contact: InsertContact): Promise<Contact> {
     const result = await db.insert(contacts).values(contact).returning();
+    return result[0];
+  }
+
+  async getExistingContact(userId: number, contactId: number): Promise<Contact | undefined> {
+    const result = await db
+      .select()
+      .from(contacts)
+      .where(and(eq(contacts.userId, userId), eq(contacts.contactId, contactId)));
     return result[0];
   }
 }
