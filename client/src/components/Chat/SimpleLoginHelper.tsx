@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -61,9 +62,10 @@ export const SimpleLoginHelper = () => {
             <Input
               id="email"
               type="email"
+              placeholder="Enter email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
+              required
             />
           </div>
           
@@ -73,9 +75,10 @@ export const SimpleLoginHelper = () => {
               <Input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
+                placeholder="Enter password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
+                required
               />
               <Button
                 type="button"
@@ -102,7 +105,7 @@ export const SimpleLoginHelper = () => {
         </form>
 
         <div className="text-center">
-          <p className="text-sm text-muted-foreground mb-2">Test with real accounts:</p>
+          <p className="text-sm text-muted-foreground mb-2">Test with existing accounts:</p>
           <div className="grid grid-cols-1 gap-2">
             <Button
               variant="outline"

@@ -1,11 +1,10 @@
+
 import { useAuth } from '@/hooks/useAuth';
 import { AuthForm } from '@/components/Auth/AuthForm';
 import { ChatLayout } from '@/components/Chat/ChatLayout';
 
 const Index = () => {
   const { user, loading } = useAuth();
-  
-
 
   if (loading) {
     return (
@@ -18,11 +17,7 @@ const Index = () => {
     );
   }
 
-  if (!user) {
-    return <AuthForm />;
-  }
-
-  return <ChatLayout />;
+  return user ? <ChatLayout /> : <AuthForm />;
 };
 
 export default Index;

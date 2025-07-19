@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import { apiRequest } from '@/lib/queryClient';
-
 export interface User {
   id: number;
   email: string;
@@ -21,26 +19,7 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is authenticated using JWT token from localStorage
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      checkAuthStatus();
-    } else {
-      setLoading(false);
-    }
-  }, []);
-
-  // Clear auth state when token becomes invalid
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'authToken' && !e.newValue) {
-        setUser(null);
-        setProfile(null);
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    checkAuthStatus();
   }, []);
 
   const checkAuthStatus = async () => {
@@ -58,22 +37,20 @@ export const useAuth = () => {
           'Authorization': `Bearer ${token}`,
         },
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         console.log('Auth check successful:', data);
         setUser(data.user);
         setProfile(data.profile);
       } else {
-        console.log('Auth check failed - invalid token');
-        // Clear invalid token
+        console.log('Auth check failed - clearing token');
         localStorage.removeItem('authToken');
         setUser(null);
         setProfile(null);
       }
     } catch (error) {
-      console.log('Auth check failed:', error);
-      // User is not authenticated
+      console.log('Auth check error:', error);
       localStorage.removeItem('authToken');
       setUser(null);
       setProfile(null);
@@ -85,7 +62,7 @@ export const useAuth = () => {
   const signUp = async (email: string, password: string, fullName: string, username: string) => {
     try {
       setLoading(true);
-      
+
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: {
@@ -93,40 +70,32 @@ export const useAuth = () => {
         },
         body: JSON.stringify({ email, password, fullName, username }),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Signup failed');
       }
-      
+
       const data = await response.json();
-      
-      // Store JWT token in localStorage
+
       if (data.token) {
         localStorage.setItem('authToken', data.token);
-        
-        // Set user and profile immediately from signup response
         setUser(data.user);
-        if (data.profile) {
-          setProfile(data.profile);
-        }
-        
-        // Fetch the latest auth status to ensure consistency
         await checkAuthStatus();
       }
-      
-      setLoading(false);
+
       return { data, error: null };
     } catch (error: any) {
-      setLoading(false);
       return { data: null, error: { message: error.message } };
+    } finally {
+      setLoading(false);
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
-      
+
       const response = await fetch('/api/auth/signin', {
         method: 'POST',
         headers: {
@@ -134,65 +103,46 @@ export const useAuth = () => {
         },
         body: JSON.stringify({ email, password }),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Login failed');
       }
-      
+
       const data = await response.json();
-      
-      // Store JWT token in localStorage
+
       if (data.token) {
         localStorage.setItem('authToken', data.token);
-        
-        // Set user and profile immediately from login response
         setUser(data.user);
-        if (data.profile) {
-          setProfile(data.profile);
-        }
-        
-        // Also fetch the latest auth status to ensure consistency
         await checkAuthStatus();
       }
-      
-      setLoading(false);
+
       return { data, error: null };
     } catch (error: any) {
-      setLoading(false);
       return { data: null, error: { message: error.message } };
+    } finally {
+      setLoading(false);
     }
   };
 
   const signOut = async () => {
     try {
-      console.log('Starting sign out process...');
-      
-      // First clear local state immediately
+      localStorage.removeItem('authToken');
       setUser(null);
       setProfile(null);
-      localStorage.removeItem('authToken');
-      
-      // Then try to call the API (but don't wait for it)
-      try {
-        await fetch('/api/auth/signout', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-      } catch (apiError) {
-        console.log('API signout call failed, but local state cleared:', apiError);
-      }
-      
-      console.log('Sign out completed');
+
+      await fetch('/api/auth/signout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
       return { error: null };
     } catch (error: any) {
-      // Even if everything fails, ensure local state is cleared
       localStorage.removeItem('authToken');
       setUser(null);
       setProfile(null);
-      console.error('Sign out error:', error);
       return { error: { message: error.message } };
     }
   };
