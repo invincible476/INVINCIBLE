@@ -1,12 +1,14 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MessageCircle, Users } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { apiRequest } from '@/lib/utils';
+import { UserProfileDialog } from './UserProfileDialog';
 
 interface ConversationsListProps {
   onSelectConversation: (id: string, name: string) => void;
@@ -15,6 +17,8 @@ interface ConversationsListProps {
 
 export const ConversationsList = ({ onSelectConversation, selectedConversationId }: ConversationsListProps) => {
   const { user } = useAuth();
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
 
   const { data: conversations = [], isLoading, error } = useQuery({
     queryKey: ['conversations'],
@@ -87,11 +91,29 @@ export const ConversationsList = ({ onSelectConversation, selectedConversationId
     return 'Unknown Conversation';
   };
 
-  const getConversationAvatar = (conversation: any, name: string) => {
+  const getConversationAvatar = (conversation: any) => {
     if (conversation.isGroup) {
       return <Users className="h-4 w-4" />;
     }
+
+    const otherParticipant = conversation.participants?.find((p: any) => p.userId !== user?.id);
+
+    if (otherParticipant?.profile?.avatarUrl) {
+        return <AvatarImage src={otherParticipant.profile.avatarUrl} alt={otherParticipant?.profile.fullName || otherParticipant?.profile.username || 'Avatar'} />;
+    }
+    
+    const name = getConversationName(conversation);
     return name.charAt(0).toUpperCase();
+  };
+
+  const openProfileDialog = (userId: string) => {
+    setSelectedProfileId(userId);
+    setIsProfileDialogOpen(true);
+  };
+
+  const closeProfileDialog = () => {
+    setIsProfileDialogOpen(false);
+    setSelectedProfileId(null);
   };
 
   return (
@@ -115,6 +137,7 @@ export const ConversationsList = ({ onSelectConversation, selectedConversationId
               {conversations.map((conversation: any) => {
                 const name = getConversationName(conversation);
                 const isSelected = selectedConversationId === conversation.id;
+                const otherParticipant = conversation.participants?.find((p: any) => p.userId !== user?.id);
 
                 const hasNewMessage = conversation.lastMessage && conversation.lastMessage.senderId !== user?.id;
                 const lastMessageTime = conversation.lastMessage?.createdAt;
@@ -129,10 +152,14 @@ export const ConversationsList = ({ onSelectConversation, selectedConversationId
                     onClick={() => onSelectConversation(conversation.id, name)}
                   >
                     <div className="flex items-start gap-3 w-full">
-                      <Avatar className="h-8 w-8 mt-1 relative">
-                        <AvatarFallback className="text-xs">
-                          {getConversationAvatar(conversation, name)}
-                        </AvatarFallback>
+                      <Avatar className="h-8 w-8 mt-1 relative cursor-pointer" onClick={() => {if(otherParticipant?.userId) openProfileDialog(otherParticipant?.userId)}}>
+                        {typeof getConversationAvatar(conversation) === 'string' ? (
+                          <AvatarFallback className="text-xs">
+                            {getConversationAvatar(conversation)}
+                          </AvatarFallback>
+                        ) : (
+                          getConversationAvatar(conversation)
+                        )}
                         {hasNewMessage && (
                           <div className="absolute -top-1 -right-1 h-3 w-3 bg-primary rounded-full flex items-center justify-center">
                             <div className="h-2 w-2 bg-white rounded-full"></div>
@@ -177,6 +204,7 @@ export const ConversationsList = ({ onSelectConversation, selectedConversationId
           )}
         </ScrollArea>
       </CardContent>
+      <UserProfileDialog userId={selectedProfileId} open={isProfileDialogOpen} onOpenChange={closeProfileDialog} />
     </Card>
   );
 };

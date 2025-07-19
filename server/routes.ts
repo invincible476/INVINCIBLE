@@ -166,6 +166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           username: profile.username,
           fullName: profile.fullName,
           avatarUrl: profile.avatarUrl,
+          bio: profile.bio,
           status: profile.status,
           lastSeen: profile.lastSeen,
           createdAt: profile.createdAt,
@@ -273,7 +274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...conversationData,
         isGroup: conversationData.isGroup || false,
       });
-      
+
       const conversation = await storage.createConversation({
         ...parsedData,
         createdBy: req.userId!,
@@ -305,7 +306,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const messages = await storage.getMessagesByConversationId(id);
-      
+
       // Enrich messages with sender profile information
       const enrichedMessages = await Promise.all(
         messages.map(async (message: any) => {
@@ -316,7 +317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         })
       );
-      
+
       res.json(enrichedMessages);
     } catch (error) {
       console.error("Get messages error:", error);

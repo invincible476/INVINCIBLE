@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Send, ArrowLeft } from 'lucide-react';
 import { MessageBubble } from './MessageBubble';
+import { UserProfileDialog } from './UserProfileDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { apiRequest } from '@/lib/utils';
 
@@ -34,6 +35,7 @@ export const ChatWindow = ({ conversationId, conversationName, onBack }: ChatWin
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
   const [message, setMessage] = useState('');
+  const [selectedProfile, setSelectedProfile] = useState<{user: any, profile: any} | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -110,7 +112,39 @@ export const ChatWindow = ({ conversationId, conversationName, onBack }: ChatWin
     scrollToBottom();
   }, [messages]);
 
-  const displayName = conversationDetails?.name || conversationName || 'Unknown';
+  const getDisplayName = () => {
+    if (conversationDetails?.name) {
+      return conversationDetails.name;
+    }
+    
+    if (conversationName && conversationName !== 'Unknown') {
+      return conversationName;
+    }
+    
+    // Try to get name from conversation details participants
+    if (conversationDetails?.participants) {
+      const otherParticipant = conversationDetails.participants.find((p: any) => p.userId !== user?.id);
+      if (otherParticipant?.profile) {
+        return otherParticipant.profile.fullName || otherParticipant.profile.username;
+      }
+    }
+    
+    return 'Unknown User';
+  };
+
+  const displayName = getDisplayName();
+
+  const handleHeaderAvatarClick = () => {
+    if (conversationDetails?.participants) {
+      const otherParticipant = conversationDetails.participants.find((p: any) => p.userId !== user?.id);
+      if (otherParticipant?.profile) {
+        setSelectedProfile({
+          user: { id: otherParticipant.userId, email: '' },
+          profile: otherParticipant.profile
+        });
+      }
+    }
+  };
 
   if (isLoading) {
     return (
@@ -138,10 +172,17 @@ export const ChatWindow = ({ conversationId, conversationName, onBack }: ChatWin
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="relative">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="text-xs">
-                  {displayName.charAt(0).toUpperCase()}
-                </AvatarFallback>
+              <Avatar 
+                className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={handleHeaderAvatarClick}
+              >
+                {conversationDetails?.participants?.find((p: any) => p.userId !== user?.id)?.profile?.avatarUrl ? (
+                  <AvatarImage src={conversationDetails.participants.find((p: any) => p.userId !== user?.id)?.profile?.avatarUrl} />
+                ) : (
+                  <AvatarFallback className="text-xs">
+                    {displayName.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                )}
               </Avatar>
               {/* Online indicator */}
               <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 border-2 border-background rounded-full"></div>
@@ -210,6 +251,17 @@ export const ChatWindow = ({ conversationId, conversationName, onBack }: ChatWin
           </form>
         </CardContent>
       </Card>
+
+      {/* Profile Dialog */}
+      {selectedProfile && (
+        <UserProfileDialog
+          isOpen={!!selectedProfile}
+          onOpenChange={(open) => !open && setSelectedProfile(null)}
+          user={selectedProfile.user}
+          profile={selectedProfile.profile}
+          currentUserId={user?.id}
+        />
+      )}
     </div>
   );
 };
