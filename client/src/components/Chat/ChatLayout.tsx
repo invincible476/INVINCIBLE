@@ -7,12 +7,13 @@ import { ContactsList } from './ContactsList';
 import { ProfileSettings } from './ProfileSettings';
 import { WelcomeMessage } from './WelcomeMessage';
 import { DemoDataSetup } from './DemoDataSetup';
+import { UserDiscovery } from './UserDiscovery';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { LogOut, MessageSquare, Users, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-type ActiveView = 'chat' | 'contacts' | 'settings';
+type ActiveView = 'chat' | 'contacts' | 'discover' | 'settings';
 
 export const ChatLayout = () => {
   const [activeView, setActiveView] = useState<ActiveView>('chat');
@@ -66,11 +67,11 @@ export const ChatLayout = () => {
         </div>
 
         {/* Navigation */}
-        <div className="flex border-b border-border">
+        <div className="grid grid-cols-2 border-b border-border">
           <Button
             variant="ghost"
             className={cn(
-              "flex-1 rounded-none text-chat-sidebar-foreground hover:bg-chat-sidebar-hover",
+              "rounded-none text-chat-sidebar-foreground hover:bg-chat-sidebar-hover",
               activeView === 'chat' && "bg-chat-sidebar-hover"
             )}
             onClick={() => setActiveView('chat')}
@@ -81,7 +82,7 @@ export const ChatLayout = () => {
           <Button
             variant="ghost"
             className={cn(
-              "flex-1 rounded-none text-chat-sidebar-foreground hover:bg-chat-sidebar-hover",
+              "rounded-none text-chat-sidebar-foreground hover:bg-chat-sidebar-hover",
               activeView === 'contacts' && "bg-chat-sidebar-hover"
             )}
             onClick={() => setActiveView('contacts')}
@@ -92,7 +93,18 @@ export const ChatLayout = () => {
           <Button
             variant="ghost"
             className={cn(
-              "flex-1 rounded-none text-chat-sidebar-foreground hover:bg-chat-sidebar-hover",
+              "rounded-none text-chat-sidebar-foreground hover:bg-chat-sidebar-hover",
+              activeView === 'discover' && "bg-chat-sidebar-hover"
+            )}
+            onClick={() => setActiveView('discover')}
+          >
+            <Users className="h-4 w-4 mr-2" />
+            Discover
+          </Button>
+          <Button
+            variant="ghost"
+            className={cn(
+              "rounded-none text-chat-sidebar-foreground hover:bg-chat-sidebar-hover",
               activeView === 'settings' && "bg-chat-sidebar-hover"
             )}
             onClick={() => setActiveView('settings')}
@@ -112,6 +124,15 @@ export const ChatLayout = () => {
           )}
           {activeView === 'contacts' && (
             <ContactsList 
+              onStartConversation={(conversationId) => {
+                // Switch to chat view and select the conversation
+                setActiveView('chat');
+                setSelectedConversationId(conversationId);
+              }}
+            />
+          )}
+          {activeView === 'discover' && (
+            <UserDiscovery 
               onStartConversation={(conversationId) => {
                 // Switch to chat view and select the conversation
                 setActiveView('chat');

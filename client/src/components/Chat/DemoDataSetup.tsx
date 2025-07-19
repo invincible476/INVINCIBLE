@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, MessageSquare, UserPlus, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { TestLoginHelper } from './TestLoginHelper';
+import { CreateDemoUsers } from './CreateDemoUsers';
 
 export const DemoDataSetup = () => {
   const { user } = useAuth();
@@ -136,7 +137,7 @@ export const DemoDataSetup = () => {
             </ul>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center space-y-4">
               <Button
                 onClick={createDemoUserAndChat}
@@ -164,6 +165,10 @@ export const DemoDataSetup = () => {
 
             <div>
               <TestLoginHelper />
+            </div>
+
+            <div>
+              <CreateDemoUsers />
             </div>
           </div>
         </CardContent>

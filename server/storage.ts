@@ -43,6 +43,7 @@ export interface IStorage {
   getUserById(id: number): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   deleteUser(id: number): Promise<void>;
+  getAllUsersWithProfiles(): Promise<any[]>;
   verifyPassword(password: string, hashedPassword: string): Promise<boolean>;
   hashPassword(password: string): Promise<string>;
 
@@ -100,6 +101,31 @@ export class DatabaseStorage implements IStorage {
 
   async deleteUser(id: number): Promise<void> {
     await db.delete(users).where(eq(users.id, id));
+  }
+
+  async getAllUsersWithProfiles(): Promise<any[]> {
+    const result = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        createdAt: users.createdAt,
+        profile: profiles,
+      })
+      .from(users)
+      .leftJoin(profiles, eq(users.id, profiles.userId))
+      .orderBy(users.createdAt);
+
+    return result.map(row => ({
+      id: row.id,
+      email: row.email,
+      createdAt: row.createdAt,
+      profile: row.profile ? {
+        fullName: row.profile.fullName,
+        username: row.profile.username,
+        avatarUrl: row.profile.avatarUrl,
+        status: row.profile.status,
+      } : null,
+    }));
   }
 
   async getProfileByUserId(userId: number): Promise<Profile | undefined> {

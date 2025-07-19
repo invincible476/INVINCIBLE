@@ -306,6 +306,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all users route
+  app.get("/api/users/all", requireAuth, async (req, res) => {
+    try {
+      const users = await storage.getAllUsersWithProfiles();
+      res.json(users);
+    } catch (error) {
+      console.error("Get all users error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // User search route
   app.get("/api/users/search", requireAuth, async (req, res) => {
     try {
