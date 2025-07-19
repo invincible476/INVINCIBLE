@@ -1,9 +1,43 @@
-` tags, ensuring that no parts are skipped or omitted.
 
-```
-<replit_final_file>
 import { QueryClient } from '@tanstack/react-query';
-import { apiRequest } from './utils';
+
+// API request utility function
+export const apiRequest = async (url: string, options: RequestInit = {}) => {
+  const token = localStorage.getItem('authToken');
+  
+  const defaultHeaders: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+
+  if (token) {
+    defaultHeaders.Authorization = `Bearer ${token}`;
+  }
+
+  const config: RequestInit = {
+    ...options,
+    headers: {
+      ...defaultHeaders,
+      ...options.headers,
+    },
+  };
+
+  const response = await fetch(url, config);
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('authToken');
+      throw new Error('Authentication failed');
+    }
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+
+  const contentType = response.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    return response.json();
+  }
+  
+  return response.text();
+};
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,6 +57,3 @@ export const queryClient = new QueryClient({
     },
   },
 });
-
-// Export the apiRequest function for direct use
-export { apiRequest };
