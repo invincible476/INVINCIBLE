@@ -27,15 +27,27 @@ export const ChatLayout = () => {
 
   useEffect(() => {
     if (user) {
-      // Fetch user profile here, replace '/api/profile' with your actual endpoint
-      fetch('/api/profile')
-        .then(res => res.json())
-        .then(data => {
-          setProfile(data);
+      // Fetch user profile with proper authentication
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        fetch('/api/profile', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
         })
-        .catch(error => {
-          console.error("Failed to fetch profile", error);
-        });
+          .then(res => {
+            if (res.ok) {
+              return res.json();
+            }
+            throw new Error('Failed to fetch profile');
+          })
+          .then(data => {
+            setProfile(data);
+          })
+          .catch(error => {
+            console.error("Failed to fetch profile", error);
+          });
+      }
     }
   }, [user]);
 
@@ -55,12 +67,13 @@ export const ChatLayout = () => {
   const hasData = conversations.length > 0 || contacts.length > 0;
   const isLoading = conversationsLoading || contactsLoading;
 
-  // Auto-switch to discover view if no conversations exist
+  // Auto-switch to discover view if no conversations exist, but allow manual navigation
   useEffect(() => {
     if (!isLoading && !hasData && activeView === 'chat') {
+      // Only auto-switch on initial load, not when user manually selects chat
       setActiveView('discover');
     }
-  }, [isLoading, hasData, activeView]);
+  }, [isLoading, hasData]);
 
   return (
     <div className="flex h-screen bg-background">
@@ -184,11 +197,39 @@ export const ChatLayout = () => {
         {selectedConversationId ? (
           <ChatWindow conversationId={selectedConversationId} />
         ) : activeView === 'discover' ? (
-          <UserDiscovery onStartConversation={setSelectedConversationId} />
+          <UserDiscovery onStartConversation={(conversationId) => {
+            setActiveView('chat');
+            setSelectedConversationId(conversationId);
+          }} />
         ) : activeView === 'contacts' ? (
-          <ContactsList onStartConversation={setSelectedConversationId} />
+          <ContactsList onStartConversation={(conversationId) => {
+            setActiveView('chat');
+            setSelectedConversationId(conversationId);
+          }} />
         ) : activeView === 'settings' ? (
           <ProfileSettings />
+        ) : activeView === 'chat' ? (
+          <div className="flex-1 flex items-center justify-center bg-muted/30">
+            <div className="text-center space-y-4">
+              <MessageSquare className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+              <h2 className="text-xl font-semibold text-muted-foreground mb-2">
+                No Conversations Yet
+              </h2>
+              <p className="text-muted-foreground mb-4">
+                Start a conversation by adding contacts or discovering new users
+              </p>
+              <div className="flex gap-2 justify-center">
+                <Button onClick={() => setActiveView('discover')} className="mt-4">
+                  <Search className="h-4 w-4 mr-2" />
+                  Discover Users
+                </Button>
+                <Button onClick={() => setActiveView('contacts')} variant="outline" className="mt-4">
+                  <Users className="h-4 w-4 mr-2" />
+                  View Contacts
+                </Button>
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="flex-1 flex items-center justify-center bg-muted/30">
             <div className="text-center space-y-4">
@@ -197,14 +238,8 @@ export const ChatLayout = () => {
                 Welcome to Chat Rescuer
               </h2>
               <p className="text-muted-foreground mb-4">
-                {hasData ? 'Select a conversation from the sidebar to start chatting' : 'Discover users to start your first conversation'}
+                Choose an option from the sidebar to get started
               </p>
-              {!hasData && (
-                <Button onClick={() => setActiveView('discover')} className="mt-4">
-                  <Search className="h-4 w-4 mr-2" />
-                  Discover Users
-                </Button>
-              )}
             </div>
           </div>
         )}
