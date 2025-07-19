@@ -1,70 +1,99 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Send, Paperclip, Smile } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Send, Bot } from 'lucide-react';
+import { ChatGPTService } from '@/lib/chatgpt';
+import { useToast } from '@/hooks/use-toast';
 
 interface MessageInputProps {
-  onSendMessage: (content: string) => Promise<void>;
+  onSendMessage: (content: string) => void;
   disabled?: boolean;
+  conversationId?: string;
 }
 
-export const MessageInput = ({ onSendMessage, disabled }: MessageInputProps) => {
+export const MessageInput = ({ onSendMessage, disabled, conversationId }: MessageInputProps) => {
   const [message, setMessage] = useState('');
-  const [sending, setSending] = useState(false);
+  const [isProcessingAI, setIsProcessingAI] = useState(false);
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || sending || disabled) return;
+    if (!message.trim() || disabled) return;
 
-    setSending(true);
-    try {
-      await onSendMessage(message.trim());
-      setMessage('');
-    } finally {
-      setSending(false);
+    const messageContent = message.trim();
+    setMessage('');
+
+    // Check if message starts with @ai for ChatGPT integration
+    if (messageContent.toLowerCase().startsWith('@ai ')) {
+      if (!ChatGPTService.isConfigured()) {
+        toast({
+          title: 'ChatGPT Not Configured',
+          description: 'Please configure your OpenAI API key in settings to use AI features.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setIsProcessingAI(true);
+
+      // Send user message first
+      onSendMessage(messageContent);
+
+      try {
+        // Extract the actual question (remove @ai prefix)
+        const aiQuery = messageContent.substring(4);
+
+        // Get ChatGPT response
+        const aiResponse = await ChatGPTService.sendMessage(aiQuery);
+
+        // Send AI response as a new message
+        setTimeout(() => {
+          onSendMessage(`🤖 ChatGPT: ${aiResponse}`);
+        }, 500);
+
+      } catch (error: any) {
+        toast({
+          title: 'AI Error',
+          description: error.message,
+          variant: 'destructive',
+        });
+
+        // Send error message
+        setTimeout(() => {
+          onSendMessage(`🤖 ChatGPT: Sorry, I encountered an error. Please try again.`);
+        }, 500);
+      } finally {
+        setIsProcessingAI(false);
+      }
+    } else {
+      // Regular message
+      onSendMessage(messageContent);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e as any);
-    }
-  };
+  const isAIMessage = message.toLowerCase().startsWith('@ai ');
 
   return (
-    <div className="border-t border-border p-4 bg-background">
-      <form onSubmit={handleSubmit} className="flex items-center space-x-2">
-        <div className="flex-1 relative">
-          <Textarea
-            placeholder="Type a message..."
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            disabled={sending || disabled}
-            className="pr-12"
-          />
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1">
-            <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0">
-              <Smile className="h-4 w-4" />
-            </Button>
-            <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0">
-              <Paperclip className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-        <Button 
-          type="submit" 
-          disabled={!message.trim() || sending || disabled}
-          size="sm"
-        >
-          {sending ? (
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
-        </Button>
-      </form>
-    </div>
+    <form onSubmit={handleSubmit} className="flex gap-2">
+      <div className="flex-1 relative">
+        <Input
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="Type a message... (use @ai for ChatGPT)"
+          disabled={disabled || isProcessingAI}
+          className={`pr-10 ${isAIMessage ? 'border-blue-500 bg-blue-50' : ''}`}
+        />
+        {isAIMessage && (
+          <Bot className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-blue-500" />
+        )}
+      </div>
+      <Button type="submit" disabled={disabled || !message.trim() || isProcessingAI}>
+        {isProcessingAI ? (
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+        ) : (
+          <Send className="h-4 w-4" />
+        )}
+      </Button>
+    </form>
   );
 };

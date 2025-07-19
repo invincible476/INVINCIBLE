@@ -53,9 +53,9 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
       if (!content.trim()) {
         throw new Error('Message cannot be empty');
       }
-      
+
       console.log('Sending message:', { content: content.trim(), conversationId });
-      
+
       return apiRequest(`/api/conversations/${conversationId}/messages`, {
         method: 'POST',
         headers: {
@@ -72,7 +72,7 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
       // Immediately refresh messages to show sent message
       queryClient.invalidateQueries({ queryKey: ['/api/conversations', conversationId, 'messages'] });
       queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
-      
+
       // Force a refetch after a short delay to ensure we get the latest data
       setTimeout(() => {
         queryClient.refetchQueries({ queryKey: ['/api/conversations', conversationId, 'messages'] });
@@ -103,13 +103,13 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
   const getConversationName = () => {
     if (!conversation) return 'Chat';
     if (conversation.name) return conversation.name;
-    
+
     if (conversation.isGroup) {
       return conversation.participants
         ?.map((p: any) => p.fullName || p.username)
         .join(', ') || 'Group Chat';
     }
-    
+
     const otherParticipant = conversation.participants?.find((p: any) => p.userId !== user?.id);
     return otherParticipant?.fullName || otherParticipant?.username || 'Unknown User';
   };
@@ -117,22 +117,22 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
   const getConversationAvatar = () => {
     if (!conversation) return null;
     if (conversation.avatarUrl) return conversation.avatarUrl;
-    
+
     if (!conversation.isGroup) {
       const otherParticipant = conversation.participants?.find((p: any) => p.userId !== user?.id);
       return otherParticipant?.avatarUrl;
     }
-    
+
     return null;
   };
 
   const getParticipantsText = () => {
     if (!conversation) return 'Loading...';
-    
+
     if (conversation.isGroup) {
       return `${conversation.participants?.length || 0} participants`;
     }
-    
+
     return 'Active now';
   };
 
@@ -200,7 +200,7 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
               const isOwnMessage = message.senderId === user?.id;
               const prevMessage = index > 0 ? messages[index - 1] : null;
               const showAvatar = !prevMessage || prevMessage.senderId !== message.senderId;
-              
+
               return (
                 <MessageBubble
                   key={`${message.id}-${message.createdAt}`}
@@ -217,9 +217,10 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
 
       {/* Message Input */}
       <MessageInput 
-        onSendMessage={handleSendMessage}
-        disabled={sendMessageMutation.isPending}
-      />
+          onSendMessage={handleSendMessage} 
+          disabled={sendMessageMutation.isPending}
+          conversationId={conversationId}
+        />
     </div>
   );
 };

@@ -81,7 +81,10 @@ export const useAuth = () => {
       if (data.token) {
         localStorage.setItem('authToken', data.token);
         setUser(data.user);
-        await checkAuthStatus();
+        // Force a small delay to ensure state updates
+        setTimeout(() => {
+          checkAuthStatus();
+        }, 100);
       }
 
       return { data, error: null };
@@ -114,7 +117,10 @@ export const useAuth = () => {
       if (data.token) {
         localStorage.setItem('authToken', data.token);
         setUser(data.user);
-        await checkAuthStatus();
+        // Force a small delay to ensure state updates properly
+        setTimeout(() => {
+          checkAuthStatus();
+        }, 100);
       }
 
       return { data, error: null };

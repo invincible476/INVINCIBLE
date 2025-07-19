@@ -6,6 +6,8 @@ import { ChatLayout } from '@/components/Chat/ChatLayout';
 const Index = () => {
   const { user, loading } = useAuth();
 
+  console.log('Index component - user:', user, 'loading:', loading);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -17,10 +19,12 @@ const Index = () => {
     );
   }
 
-  if (user) {
+  if (user && user.id) {
+    console.log('Rendering ChatLayout for user:', user.id);
     return <ChatLayout />;
   }
 
+  console.log('Rendering AuthForm - no authenticated user');
   return <AuthForm />;
 };
 
