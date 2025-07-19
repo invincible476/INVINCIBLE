@@ -33,11 +33,11 @@ export const MessageBubble = ({ message, isOwnMessage, showAvatar = true }: Mess
 
   return (
     <div className={cn(
-      "flex gap-3 mb-3",
+      "flex gap-2 mb-4 max-w-full",
       isOwnMessage ? "flex-row-reverse" : "flex-row"
     )}>
       {showAvatar && (
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 self-end">
           <Avatar className="h-8 w-8">
             <AvatarImage src={message.sender?.avatarUrl || ''} />
             <AvatarFallback className="bg-primary text-primary-foreground text-xs">
@@ -48,27 +48,27 @@ export const MessageBubble = ({ message, isOwnMessage, showAvatar = true }: Mess
       )}
       
       <div className={cn(
-        "flex flex-col gap-1",
+        "flex flex-col gap-1 min-w-0 flex-1",
         isOwnMessage ? "items-end" : "items-start",
-        !showAvatar && (isOwnMessage ? "mr-11" : "ml-11")
+        !showAvatar && (isOwnMessage ? "mr-10" : "ml-10")
       )}>
         {!isOwnMessage && showAvatar && (
-          <p className="text-xs text-muted-foreground px-1">
+          <p className="text-xs text-muted-foreground px-2 font-medium">
             {message.sender?.fullName || message.sender?.username || 'Unknown'}
           </p>
         )}
         
         <div className={cn(
-          "max-w-[300px] sm:max-w-[400px] rounded-2xl px-4 py-2 break-words",
+          "max-w-[70%] rounded-lg px-3 py-2 break-words shadow-sm",
           isOwnMessage 
-            ? "bg-primary text-primary-foreground rounded-br-sm" 
-            : "bg-muted text-foreground rounded-bl-sm"
+            ? "bg-blue-500 text-white rounded-br-none" 
+            : "bg-gray-100 text-gray-900 rounded-bl-none border"
         )}>
           <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
         </div>
         
         <p className={cn(
-          "text-xs text-muted-foreground px-1",
+          "text-xs text-gray-500 px-1 mt-1",
           isOwnMessage ? "text-right" : "text-left"
         )}>
           {format(new Date(message.createdAt), 'HH:mm')}

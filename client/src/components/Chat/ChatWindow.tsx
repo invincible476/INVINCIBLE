@@ -38,7 +38,8 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
   const { data: messages = [], isLoading: loading } = useQuery({
     queryKey: ['/api/conversations', conversationId, 'messages'],
     enabled: !!conversationId && !!user,
-    refetchInterval: 1000, // Refresh every 1 second for better real-time feel
+    refetchInterval: 2000, // Refresh every 2 seconds
+    refetchOnWindowFocus: true,
   });
 
   const { data: conversation } = useQuery({
@@ -176,11 +177,14 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-2">
+      <ScrollArea className="flex-1 p-4 bg-gray-50">
+        <div className="space-y-1">
           {messages.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">No messages yet. Start the conversation!</p>
+            <div className="text-center py-12">
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <p className="text-gray-600 text-lg">No messages yet</p>
+                <p className="text-gray-400 text-sm mt-2">Start the conversation by sending a message!</p>
+              </div>
             </div>
           ) : (
             messages.map((message: Message, index) => {
@@ -190,7 +194,7 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
               
               return (
                 <MessageBubble
-                  key={message.id}
+                  key={`${message.id}-${message.createdAt}`}
                   message={message}
                   isOwnMessage={isOwnMessage}
                   showAvatar={showAvatar}
@@ -198,7 +202,7 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
               );
             })
           )}
-          <div ref={messagesEndRef} />
+          <div ref={messagesEndRef} className="h-4" />
         </div>
       </ScrollArea>
 

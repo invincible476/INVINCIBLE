@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { LogOut, MessageSquare, Users, Settings, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 
 type ActiveView = 'chat' | 'contacts' | 'discover' | 'settings';
 
@@ -18,10 +19,25 @@ export const ChatLayout = () => {
   const [activeView, setActiveView] = useState<ActiveView>('discover');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const { user, signOut } = useAuth();
+  const [profile, setProfile] = useState(null);
 
   const handleSignOut = async () => {
     await signOut();
   };
+
+  useEffect(() => {
+    if (user) {
+      // Fetch user profile here, replace '/api/profile' with your actual endpoint
+      fetch('/api/profile')
+        .then(res => res.json())
+        .then(data => {
+          setProfile(data);
+        })
+        .catch(error => {
+          console.error("Failed to fetch profile", error);
+        });
+    }
+  }, [user]);
 
   // Check if user has any conversations or contacts
   const { data: conversations = [], isLoading: conversationsLoading } = useQuery({
@@ -67,6 +83,24 @@ export const ChatLayout = () => {
           </div>
         </div>
 
+        {/* Current User Info */}
+        {profile && (
+          <div className="p-3 bg-blue-50 border-b">
+            <div className="flex items-center space-x-3">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={profile.avatarUrl || ''} />
+                <AvatarFallback className="bg-blue-500 text-white">
+                  {(profile.fullName || profile.username || 'U').charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm truncate">{profile.fullName || profile.username}</p>
+                <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Navigation */}
         <div className="grid grid-cols-4 border-b border-border">
           <Button
@@ -100,28 +134,6 @@ export const ChatLayout = () => {
             onClick={() => setActiveView('discover')}
           >
             <Search className="h-4 w-4 mr-2" />
-            Discover
-          </Button>
-          <Button
-            variant="ghost"
-            className={cn(
-              "rounded-none text-chat-sidebar-foreground hover:bg-chat-sidebar-hover",
-              activeView === 'settings' && "bg-chat-sidebar-hover"
-            )}
-            onClick={() => setActiveView('settings')}
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            Settings
-          </Button>
-          <Button
-            variant="ghost"
-            className={cn(
-              "rounded-none text-chat-sidebar-foreground hover:bg-chat-sidebar-hover",
-              activeView === 'discover' && "bg-chat-sidebar-hover"
-            )}
-            onClick={() => setActiveView('discover')}
-          >
-            <Users className="h-4 w-4 mr-2" />
             Discover
           </Button>
           <Button
