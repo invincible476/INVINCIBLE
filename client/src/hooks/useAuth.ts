@@ -14,151 +14,39 @@ export interface Profile {
 }
 
 export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  return useQuery({
+    queryKey: ['/api/user'],
+    queryFn: async (): Promise<User | null> => {
+      try {
+        const response = await fetch('/api/user', {
+          credentials: 'include',
+        });
 
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
+        if (!response.ok) {
+          if (response.status === 401) {
+            return null;
+          }
+          throw new Error('Failed to fetch user');
+        }
 
-  const checkAuthStatus = async () => {
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      setUser(null);
-      setProfile(null);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
         const data = await response.json();
         console.log('Auth check successful:', data);
-        setUser(data.user);
-        setProfile(data.profile);
-      } else {
-        console.log('Auth check failed - clearing token');
-        localStorage.removeItem('authToken');
-        setUser(null);
-        setProfile(null);
+
+        // Return the user data in the correct format
+        if (data && data.user && data.profile) {
+          return {
+            user: data.user,
+            profile: data.profile
+          };
+        }
+
+        return null;
+      } catch (error) {
+        console.log('Auth check error:', error);
+        return null;
       }
-    } catch (error) {
-      console.log('Auth check error:', error);
-      localStorage.removeItem('authToken');
-      setUser(null);
-      setProfile(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signUp = async (email: string, password: string, fullName: string, username: string) => {
-    try {
-      setLoading(true);
-
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password, fullName, username }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Signup failed');
-      }
-
-      const data = await response.json();
-
-      if (data.token) {
-        localStorage.setItem('authToken', data.token);
-        setUser(data.user);
-        // Force a small delay to ensure state updates
-        setTimeout(() => {
-          checkAuthStatus();
-        }, 100);
-      }
-
-      return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: { message: error.message } };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signIn = async (email: string, password: string) => {
-    try {
-      setLoading(true);
-
-      const response = await fetch('/api/auth/signin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Login failed');
-      }
-
-      const data = await response.json();
-
-      if (data.token) {
-        localStorage.setItem('authToken', data.token);
-        setUser(data.user);
-        // Force a small delay to ensure state updates properly
-        setTimeout(() => {
-          checkAuthStatus();
-        }, 100);
-      }
-
-      return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: { message: error.message } };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signOut = async () => {
-    try {
-      localStorage.removeItem('authToken');
-      setUser(null);
-      setProfile(null);
-
-      await fetch('/api/auth/signout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      return { error: null };
-    } catch (error: any) {
-      localStorage.removeItem('authToken');
-      setUser(null);
-      setProfile(null);
-      return { error: { message: error.message } };
-    }
-  };
-
-  return {
-    user,
-    profile,
-    loading,
-    signUp,
-    signIn,
-    signOut,
-  };
+    },
+    retry: false,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 };
