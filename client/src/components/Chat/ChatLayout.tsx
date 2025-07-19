@@ -22,7 +22,17 @@ export const ChatLayout = () => {
   const [profile, setProfile] = useState(null);
 
   const handleSignOut = async () => {
-    await signOut();
+    try {
+      console.log('Signing out...');
+      await signOut();
+      // Force a full page reload to clear all state
+      window.location.reload();
+    } catch (error) {
+      console.error('Sign out error:', error);
+      // Even if there's an error, try to clear local state
+      localStorage.removeItem('authToken');
+      window.location.reload();
+    }
   };
 
   useEffect(() => {
@@ -55,13 +65,15 @@ export const ChatLayout = () => {
   const { data: conversations = [], isLoading: conversationsLoading } = useQuery({
     queryKey: ['/api/conversations'],
     enabled: !!user,
-    refetchInterval: 3000, // Refresh every 3 seconds for real-time updates
+    refetchInterval: 5000, // Refresh every 5 seconds to reduce load
+    staleTime: 2000, // Consider data stale after 2 seconds
   });
 
   const { data: contacts = [], isLoading: contactsLoading } = useQuery({
     queryKey: ['/api/contacts'],
     enabled: !!user,
-    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchInterval: 8000, // Refresh every 8 seconds to reduce load
+    staleTime: 3000, // Consider data stale after 3 seconds
   });
 
   const hasData = conversations.length > 0 || contacts.length > 0;
@@ -198,11 +210,13 @@ export const ChatLayout = () => {
           <ChatWindow conversationId={selectedConversationId} />
         ) : activeView === 'discover' ? (
           <UserDiscovery onStartConversation={(conversationId) => {
+            console.log('Starting conversation:', conversationId);
             setActiveView('chat');
             setSelectedConversationId(conversationId);
           }} />
         ) : activeView === 'contacts' ? (
           <ContactsList onStartConversation={(conversationId) => {
+            console.log('Starting conversation from contacts:', conversationId);
             setActiveView('chat');
             setSelectedConversationId(conversationId);
           }} />
@@ -210,24 +224,29 @@ export const ChatLayout = () => {
           <ProfileSettings />
         ) : activeView === 'chat' ? (
           <div className="flex-1 flex items-center justify-center bg-muted/30">
-            <div className="text-center space-y-4">
+            <div className="text-center space-y-4 max-w-md mx-auto p-6">
               <MessageSquare className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
               <h2 className="text-xl font-semibold text-muted-foreground mb-2">
-                No Conversations Yet
+                No Conversations Selected
               </h2>
               <p className="text-muted-foreground mb-4">
-                Start a conversation by adding contacts or discovering new users
+                {conversations.length > 0 
+                  ? 'Select a conversation from the sidebar to start chatting'
+                  : 'Start a conversation by adding contacts or discovering new users'
+                }
               </p>
-              <div className="flex gap-2 justify-center">
-                <Button onClick={() => setActiveView('discover')} className="mt-4">
-                  <Search className="h-4 w-4 mr-2" />
-                  Discover Users
-                </Button>
-                <Button onClick={() => setActiveView('contacts')} variant="outline" className="mt-4">
-                  <Users className="h-4 w-4 mr-2" />
-                  View Contacts
-                </Button>
-              </div>
+              {conversations.length === 0 && (
+                <div className="flex flex-col gap-2 justify-center">
+                  <Button onClick={() => setActiveView('discover')} className="w-full">
+                    <Search className="h-4 w-4 mr-2" />
+                    Discover Users
+                  </Button>
+                  <Button onClick={() => setActiveView('contacts')} variant="outline" className="w-full">
+                    <Users className="h-4 w-4 mr-2" />
+                    View Contacts
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         ) : (

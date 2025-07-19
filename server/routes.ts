@@ -279,10 +279,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/conversations/:id/messages", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
+      const { content, messageType = 'text' } = req.body;
+      
+      if (!content || !content.trim()) {
+        return res.status(400).json({ error: "Message content is required" });
+      }
+      
+      console.log(`Creating message for conversation ${id} from user ${req.userId}`);
       
       // Create the complete message object with conversationId and senderId
       const messageData = {
-        ...req.body,
+        content: content.trim(),
+        messageType,
         conversationId: id,
         senderId: req.userId!,
       };
@@ -292,13 +300,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const message = await storage.createMessage(parsedMessageData);
       
+      console.log(`Message created successfully:`, message.id);
+      
       // Note: Real-time broadcasting would go here in production
       // For now, clients will refetch via polling or manual refresh
       
       res.json(message);
     } catch (error) {
       console.error("Create message error:", error);
-      res.status(500).json({ error: "Internal server error" });
+      res.status(500).json({ error: "Failed to create message. Please try again." });
     }
   });
 

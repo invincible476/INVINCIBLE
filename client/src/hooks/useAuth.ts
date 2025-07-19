@@ -166,22 +166,33 @@ export const useAuth = () => {
 
   const signOut = async () => {
     try {
-      await apiRequest('/api/auth/signout', {
-        method: 'POST',
-      });
+      console.log('Starting sign out process...');
       
-      // Remove JWT token from localStorage
-      localStorage.removeItem('authToken');
-      
+      // First clear local state immediately
       setUser(null);
       setProfile(null);
+      localStorage.removeItem('authToken');
       
+      // Then try to call the API (but don't wait for it)
+      try {
+        await fetch('/api/auth/signout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+      } catch (apiError) {
+        console.log('API signout call failed, but local state cleared:', apiError);
+      }
+      
+      console.log('Sign out completed');
       return { error: null };
     } catch (error: any) {
-      // Even if API call fails, clear local state
+      // Even if everything fails, ensure local state is cleared
       localStorage.removeItem('authToken');
       setUser(null);
       setProfile(null);
+      console.error('Sign out error:', error);
       return { error: { message: error.message } };
     }
   };

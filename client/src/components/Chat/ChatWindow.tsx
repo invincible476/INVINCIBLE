@@ -38,8 +38,9 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
   const { data: messages = [], isLoading: loading } = useQuery({
     queryKey: ['/api/conversations', conversationId, 'messages'],
     enabled: !!conversationId && !!user,
-    refetchInterval: 2000, // Refresh every 2 seconds
+    refetchInterval: 3000, // Refresh every 3 seconds to reduce load
     refetchOnWindowFocus: true,
+    staleTime: 1000, // Consider data stale after 1 second
   });
 
   const { data: conversation } = useQuery({
@@ -49,6 +50,12 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
+      if (!content.trim()) {
+        throw new Error('Message cannot be empty');
+      }
+      
+      console.log('Sending message:', { content: content.trim(), conversationId });
+      
       return apiRequest(`/api/conversations/${conversationId}/messages`, {
         method: 'POST',
         headers: {
@@ -60,14 +67,16 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
         }),
       });
     },
-    onSuccess: () => {
+    onSuccess: (newMessage) => {
+      console.log('Message sent successfully:', newMessage);
       // Immediately refresh messages to show sent message
       queryClient.invalidateQueries({ queryKey: ['/api/conversations', conversationId, 'messages'] });
       queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
-      toast({
-        title: 'Message sent',
-        description: 'Your message has been sent successfully',
-      });
+      
+      // Force a refetch after a short delay to ensure we get the latest data
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ['/api/conversations', conversationId, 'messages'] });
+      }, 500);
     },
     onError: (error: any) => {
       console.error('Send message error:', error);
