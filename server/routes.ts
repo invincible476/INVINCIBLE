@@ -279,13 +279,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/conversations/:id/messages", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      const messageData = insertMessageSchema.parse(req.body);
       
-      const message = await storage.createMessage({
-        ...messageData,
+      // Create the complete message object with conversationId and senderId
+      const messageData = {
+        ...req.body,
         conversationId: id,
         senderId: req.userId!,
-      });
+      };
+      
+      // Parse with the complete data
+      const parsedMessageData = insertMessageSchema.parse(messageData);
+      
+      const message = await storage.createMessage(parsedMessageData);
       
       // Note: Real-time broadcasting would go here in production
       // For now, clients will refetch via polling or manual refresh
