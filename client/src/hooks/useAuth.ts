@@ -30,13 +30,37 @@ export const useAuth = () => {
     }
   }, []);
 
+  // Clear auth state when token becomes invalid
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'authToken' && !e.newValue) {
+        setUser(null);
+        setProfile(null);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   const checkAuthStatus = async () => {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
     try {
-      const response = await apiRequest('/api/auth/me');
+      const response = await fetch('/api/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
       
-      if (response.user) {
-        setUser(response.user);
-        setProfile(response.profile);
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user);
+        setProfile(data.profile);
       } else {
         // Clear invalid token
         localStorage.removeItem('authToken');
@@ -58,21 +82,31 @@ export const useAuth = () => {
     try {
       setLoading(true);
       
-      const response = await apiRequest('/api/auth/signup', {
+      const response = await fetch('/api/auth/signup', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ email, password, fullName, username }),
       });
       
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Signup failed');
+      }
+      
+      const data = await response.json();
+      
       // Store JWT token in localStorage
-      if (response.token) {
-        localStorage.setItem('authToken', response.token);
-        setUser(response.user);
+      if (data.token) {
+        localStorage.setItem('authToken', data.token);
+        setUser(data.user);
         // Fetch profile after signup
         await checkAuthStatus();
       }
       
       setLoading(false);
-      return { data: response, error: null };
+      return { data, error: null };
     } catch (error: any) {
       setLoading(false);
       return { data: null, error: { message: error.message } };
@@ -83,21 +117,31 @@ export const useAuth = () => {
     try {
       setLoading(true);
       
-      const response = await apiRequest('/api/auth/signin', {
+      const response = await fetch('/api/auth/signin', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ email, password }),
       });
       
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Login failed');
+      }
+      
+      const data = await response.json();
+      
       // Store JWT token in localStorage
-      if (response.token) {
-        localStorage.setItem('authToken', response.token);
-        setUser(response.user);
+      if (data.token) {
+        localStorage.setItem('authToken', data.token);
+        setUser(data.user);
         // Fetch full auth data including profile
         await checkAuthStatus();
       }
       
       setLoading(false);
-      return { data: response, error: null };
+      return { data, error: null };
     } catch (error: any) {
       setLoading(false);
       return { data: null, error: { message: error.message } };

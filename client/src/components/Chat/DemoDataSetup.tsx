@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, MessageSquare, UserPlus, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { TestLoginHelper } from './TestLoginHelper';
-import { CreateDemoUsers } from './CreateDemoUsers';
+import { SimpleLoginHelper } from './SimpleLoginHelper';
 
 export const DemoDataSetup = () => {
   const { user } = useAuth();
@@ -137,39 +136,8 @@ export const DemoDataSetup = () => {
             </ul>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center space-y-4">
-              <Button
-                onClick={createDemoUserAndChat}
-                disabled={isCreating}
-                size="lg"
-                className="px-8"
-              >
-                {isCreating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Setting up demo...
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Set Up Demo Contact & Chat
-                  </>
-                )}
-              </Button>
-              
-              <p className="text-sm text-muted-foreground">
-                Get started with a demo contact and conversation
-              </p>
-            </div>
-
-            <div>
-              <TestLoginHelper />
-            </div>
-
-            <div>
-              <CreateDemoUsers />
-            </div>
+          <div className="flex justify-center">
+            <SimpleLoginHelper />
           </div>
         </CardContent>
       </Card>
