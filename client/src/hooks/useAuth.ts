@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/utils';
 
@@ -77,7 +78,9 @@ export const useAuth = () => {
   });
 
   const signInMutation = useMutation({
-    mutationFn: async (credentials: SignInData) => {
+    mutationFn: async (credentials: SignInData): Promise<{ user: User; profile: Profile; token: string }> => {
+      console.log('Attempting sign in for:', credentials.email);
+      
       const response = await fetch('/api/auth/signin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -85,25 +88,35 @@ export const useAuth = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Sign in failed');
+        let errorMessage = 'Sign in failed';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          console.error('Error parsing error response:', e);
+        }
+        console.error('Sign in failed:', response.status, errorMessage);
+        throw new Error(errorMessage);
       }
 
-      return response.json();
+      const data = await response.json();
+      console.log('Sign in successful:', data);
+      return data;
     },
     onSuccess: (data) => {
+      console.log('Setting auth token and updating cache');
       localStorage.setItem('authToken', data.token);
       queryClient.setQueryData(['auth'], { user: data.user, profile: data.profile });
       queryClient.invalidateQueries({ queryKey: ['auth'] });
     },
     onError: (error) => {
-      console.error('Sign in error:', error);
+      console.error('Sign in mutation error:', error);
       localStorage.removeItem('authToken');
     },
   });
 
   const signUpMutation = useMutation({
-    mutationFn: async (userData: SignUpData) => {
+    mutationFn: async (userData: SignUpData): Promise<{ user: User; profile: Profile; token: string }> => {
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -111,8 +124,14 @@ export const useAuth = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Sign up failed');
+        let errorMessage = 'Sign up failed';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          console.error('Error parsing error response:', e);
+        }
+        throw new Error(errorMessage);
       }
 
       return response.json();
@@ -130,7 +149,13 @@ export const useAuth = () => {
 
   const signOutMutation = useMutation({
     mutationFn: async () => {
-      await fetch('/api/auth/signout', { method: 'POST' });
+      await fetch('/api/auth/signout', { 
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
+        }
+      });
     },
     onSuccess: () => {
       localStorage.removeItem('authToken');
@@ -139,13 +164,32 @@ export const useAuth = () => {
     },
   });
 
+  // Create a wrapper function that returns both result and error
+  const signIn = async (email: string, password: string) => {
+    try {
+      await signInMutation.mutateAsync({ email, password });
+      return { error: null };
+    } catch (error: any) {
+      return { error: { message: error.message } };
+    }
+  };
+
+  const signUp = async (userData: SignUpData) => {
+    try {
+      await signUpMutation.mutateAsync(userData);
+      return { error: null };
+    } catch (error: any) {
+      return { error: { message: error.message } };
+    }
+  };
+
   return {
     user: data?.user || null,
     profile: data?.profile || null,
     isLoading,
     error,
-    signIn: signInMutation.mutateAsync,
-    signUp: signUpMutation.mutateAsync,
+    signIn,
+    signUp,
     signOut: signOutMutation.mutateAsync,
     isSigningIn: signInMutation.isPending,
     isSigningUp: signUpMutation.isPending,

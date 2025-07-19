@@ -275,7 +275,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const messages = await storage.getMessagesByConversationId(id);
-      res.json(messages);
+      
+      // Enrich messages with sender profile information
+      const enrichedMessages = await Promise.all(
+        messages.map(async (message: any) => {
+          const senderProfile = await storage.getProfileByUserId(message.senderId);
+          return {
+            ...message,
+            senderProfile
+          };
+        })
+      );
+      
+      res.json(enrichedMessages);
     } catch (error) {
       console.error("Get messages error:", error);
       res.status(500).json({ error: "Internal server error" });
