@@ -39,9 +39,14 @@ export const AuthForm = () => {
     setIsLoading(true);
 
     try {
-      signIn({
-        email: signInForm.email,
-        password: signInForm.password,
+      await new Promise((resolve, reject) => {
+        signIn({
+          email: signInForm.email,
+          password: signInForm.password,
+        }, {
+          onSuccess: resolve,
+          onError: reject
+        });
       });
     } catch (error: any) {
       toast({
@@ -49,9 +54,9 @@ export const AuthForm = () => {
         description: error.message || 'Failed to sign in',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -69,11 +74,16 @@ export const AuthForm = () => {
     setIsLoading(true);
 
     try {
-      signUp({
-        email: signUpForm.email,
-        password: signUpForm.password,
-        username: signUpForm.username,
-        fullName: signUpForm.fullName,
+      await new Promise((resolve, reject) => {
+        signUp({
+          email: signUpForm.email,
+          password: signUpForm.password,
+          username: signUpForm.username,
+          fullName: signUpForm.fullName,
+        }, {
+          onSuccess: resolve,
+          onError: reject
+        });
       });
     } catch (error: any) {
       toast({
@@ -81,9 +91,9 @@ export const AuthForm = () => {
         description: error.message || 'Failed to create account',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   return (

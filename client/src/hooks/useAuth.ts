@@ -83,20 +83,24 @@ export function useAuth() {
       return response.json();
     },
     onSuccess: (data) => {
+      console.log('Sign in mutation success:', data);
       if (data.token) {
         localStorage.setItem('authToken', data.token);
       }
       
-      // Get profile data for the full auth data
-      const authData = {
+      // Create the auth data object
+      const authData: AuthData = {
         user: data.user,
-        profile: data.profile // This should come from the server
+        profile: data.profile
       };
       
+      // Set the query data and invalidate to trigger refetch
       queryClient.setQueryData(['auth'], authData);
+      queryClient.invalidateQueries({ queryKey: ['auth'] });
       toast.success('Signed in successfully');
     },
     onError: (error) => {
+      console.error('Sign in mutation error:', error);
       toast.error(error.message);
     },
   });
@@ -125,20 +129,24 @@ export function useAuth() {
       return response.json();
     },
     onSuccess: (data) => {
+      console.log('Sign up mutation success:', data);
       if (data.token) {
         localStorage.setItem('authToken', data.token);
       }
       
-      // Get profile data for the full auth data
-      const authData = {
+      // Create the auth data object
+      const authData: AuthData = {
         user: data.user,
-        profile: data.profile // This should come from the server
+        profile: data.profile
       };
       
+      // Set the query data and invalidate to trigger refetch
       queryClient.setQueryData(['auth'], authData);
+      queryClient.invalidateQueries({ queryKey: ['auth'] });
       toast.success('Account created successfully');
     },
     onError: (error) => {
+      console.error('Sign up mutation error:', error);
       toast.error(error.message);
     },
   });
