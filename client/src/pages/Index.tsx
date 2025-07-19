@@ -4,20 +4,9 @@ import { ChatLayout } from '@/components/Chat/ChatLayout';
 import { useEffect } from 'react';
 
 export default function Index() {
-  const { user, isLoading, error, refetch } = useAuth();
+  const { user, isLoading } = useAuth();
 
-  console.log('Index component - user:', user, 'loading:', isLoading, 'error:', error);
-
-  // Refetch auth status when component mounts or when there's an error
-  useEffect(() => {
-    if (error) {
-      console.log('Auth error detected, refetching...');
-      const timer = setTimeout(() => {
-        refetch();
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [error, refetch]);
+  console.log('Index component - user:', user, 'loading:', isLoading);
 
   if (isLoading) {
     return (

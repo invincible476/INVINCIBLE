@@ -29,12 +29,13 @@ export function useAuth() {
   const { data, isLoading, error, refetch } = useQuery<AuthData>({
     queryKey: ['auth'],
     queryFn: async () => {
-      try {
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-          throw new Error('No token found');
-        }
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.log('No auth token found');
+        return null;
+      }
 
+      try {
         const response = await fetch('/api/auth/me', {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -46,7 +47,8 @@ export function useAuth() {
           if (response.status === 401) {
             localStorage.removeItem('authToken');
           }
-          throw new Error('Not authenticated');
+          console.log('Auth check failed:', response.status);
+          return null;
         }
 
         const data = await response.json();
@@ -55,13 +57,13 @@ export function useAuth() {
       } catch (error) {
         console.log('Auth check error:', error);
         localStorage.removeItem('authToken');
-        throw error;
+        return null;
       }
     },
-    retry: 1,
-    staleTime: 30000, // 30 seconds
-    refetchOnWindowFocus: true,
-    refetchInterval: 60000, // Refetch every minute
+    retry: false,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+    refetchInterval: false,
   });
 
   const signInMutation = useMutation({
