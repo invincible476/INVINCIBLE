@@ -20,10 +20,16 @@ export const ConversationsList = ({ onSelectConversation, selectedConversationId
     queryKey: ['conversations'],
     queryFn: async () => {
       const response = await apiRequest('/api/conversations');
-      return response || [];
+      // Sort conversations by last message time (newest first)
+      const sorted = (response || []).sort((a: any, b: any) => {
+        const aTime = a.lastMessage?.createdAt || a.createdAt || 0;
+        const bTime = b.lastMessage?.createdAt || b.createdAt || 0;
+        return new Date(bTime).getTime() - new Date(aTime).getTime();
+      });
+      return sorted;
     },
     enabled: !!user,
-    refetchInterval: 10000, // Refetch every 10 seconds
+    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
   });
 
   if (isLoading) {
@@ -110,31 +116,58 @@ export const ConversationsList = ({ onSelectConversation, selectedConversationId
                 const name = getConversationName(conversation);
                 const isSelected = selectedConversationId === conversation.id;
 
+                const hasNewMessage = conversation.lastMessage && conversation.lastMessage.senderId !== user?.id;
+                const lastMessageTime = conversation.lastMessage?.createdAt;
+                const timeDisplay = lastMessageTime ? 
+                  new Date(lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
                 return (
                   <Button
                     key={conversation.id}
                     variant={isSelected ? "secondary" : "ghost"}
-                    className="w-full justify-start h-auto p-3 text-left"
+                    className={`w-full justify-start h-auto p-3 text-left relative ${hasNewMessage ? 'bg-primary/5' : ''}`}
                     onClick={() => onSelectConversation(conversation.id, name)}
                   >
                     <div className="flex items-start gap-3 w-full">
-                      <Avatar className="h-8 w-8 mt-1">
+                      <Avatar className="h-8 w-8 mt-1 relative">
                         <AvatarFallback className="text-xs">
                           {getConversationAvatar(conversation, name)}
                         </AvatarFallback>
+                        {hasNewMessage && (
+                          <div className="absolute -top-1 -right-1 h-3 w-3 bg-primary rounded-full flex items-center justify-center">
+                            <div className="h-2 w-2 bg-white rounded-full"></div>
+                          </div>
+                        )}
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{name}</p>
+                        <div className="flex justify-between items-start">
+                          <p className={`font-medium text-sm truncate ${hasNewMessage ? 'text-primary' : ''}`}>
+                            {name}
+                          </p>
+                          {timeDisplay && (
+                            <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">
+                              {timeDisplay}
+                            </span>
+                          )}
+                        </div>
                         {conversation.lastMessage && (
-                          <p className="text-xs text-muted-foreground truncate">
+                          <p className={`text-xs truncate ${hasNewMessage ? 'text-primary/80 font-medium' : 'text-muted-foreground'}`}>
+                            {conversation.lastMessage.senderId === user?.id ? 'You: ' : ''}
                             {conversation.lastMessage.content}
                           </p>
                         )}
-                        {conversation.isGroup && (
-                          <Badge variant="outline" size="sm" className="mt-1">
-                            Group
-                          </Badge>
-                        )}
+                        <div className="flex items-center gap-2 mt-1">
+                          {conversation.isGroup && (
+                            <Badge variant="outline" size="sm">
+                              Group
+                            </Badge>
+                          )}
+                          {hasNewMessage && (
+                            <Badge variant="default" size="sm" className="bg-primary text-primary-foreground">
+                              New
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </Button>

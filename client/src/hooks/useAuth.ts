@@ -81,26 +81,42 @@ export const useAuth = () => {
     mutationFn: async (credentials: SignInData): Promise<{ user: User; profile: Profile; token: string }> => {
       console.log('Attempting sign in for:', credentials.email);
       
+      // Clear any existing token first
+      localStorage.removeItem('authToken');
+      
       const response = await fetch('/api/auth/signin', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credentials),
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          email: credentials.email.trim(),
+          password: credentials.password.trim()
+        }),
+        credentials: 'include'
       });
 
       if (!response.ok) {
         let errorMessage = 'Sign in failed';
         try {
           const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
+          errorMessage = errorData.error || `HTTP ${response.status}`;
+          console.error('Sign in error response:', errorData);
         } catch (e) {
           console.error('Error parsing error response:', e);
+          errorMessage = `Sign in failed (${response.status})`;
         }
-        console.error('Sign in failed:', response.status, errorMessage);
         throw new Error(errorMessage);
       }
 
       const data = await response.json();
       console.log('Sign in successful:', data);
+      
+      if (!data.token || !data.user || !data.profile) {
+        throw new Error('Invalid response from server');
+      }
+      
       return data;
     },
     onSuccess: (data) => {
@@ -108,10 +124,13 @@ export const useAuth = () => {
       localStorage.setItem('authToken', data.token);
       queryClient.setQueryData(['auth'], { user: data.user, profile: data.profile });
       queryClient.invalidateQueries({ queryKey: ['auth'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
     },
     onError: (error) => {
       console.error('Sign in mutation error:', error);
       localStorage.removeItem('authToken');
+      queryClient.setQueryData(['auth'], null);
     },
   });
 
@@ -167,10 +186,12 @@ export const useAuth = () => {
   // Create a wrapper function that returns both result and error
   const signIn = async (email: string, password: string) => {
     try {
-      await signInMutation.mutateAsync({ email, password });
-      return { error: null };
+      const result = await signInMutation.mutateAsync({ email, password });
+      console.log('Sign in wrapper - success:', result);
+      return { error: null, data: result };
     } catch (error: any) {
-      return { error: { message: error.message } };
+      console.error('Sign in wrapper - error:', error);
+      return { error: { message: error.message || 'Sign in failed' } };
     }
   };
 

@@ -49,38 +49,52 @@ export const ChatWindow = ({ conversationId, conversationName, onBack }: ChatWin
     enabled: !!conversationId,
   });
 
-  // Fetch messages
-  const { data: messages = [], isLoading } = useQuery({
+  // Fetch messages with more frequent updates
+  const { data: messages = [], isLoading, refetch: refetchMessages } = useQuery({
     queryKey: ['messages', conversationId],
     queryFn: async () => {
+      console.log(`Fetching messages for conversation ${conversationId}`);
       const response = await apiRequest(`/api/conversations/${conversationId}/messages`);
-      return response || [];
+      const msgs = response || [];
+      console.log(`Loaded ${msgs.length} messages`);
+      return msgs;
     },
     enabled: !!conversationId,
-    refetchInterval: 5000, // Refetch every 5 seconds
+    refetchInterval: 3000, // Refetch every 3 seconds for real-time feel
+    staleTime: 1000, // Consider data stale after 1 second
   });
 
-  // Send message mutation
+  // Send message mutation with better error handling
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
-      console.log('Sending message:', { content, conversationId });
+      if (!content.trim()) {
+        throw new Error('Message cannot be empty');
+      }
+      
+      console.log('Sending message:', { content: content.trim(), conversationId });
       const response = await apiRequest(`/api/conversations/${conversationId}/messages`, {
         method: 'POST',
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ 
+          content: content.trim(),
+          messageType: 'text'
+        }),
       });
       return response;
     },
     onSuccess: (newMessage) => {
       console.log('Message sent successfully:', newMessage);
-      // Invalidate and refetch messages
-      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
       setMessage('');
-      // Scroll to bottom after a short delay to ensure the message is rendered
-      setTimeout(scrollToBottom, 100);
+      
+      // Immediately refetch messages and conversations
+      refetchMessages();
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      
+      // Scroll to bottom
+      setTimeout(scrollToBottom, 150);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Failed to send message:', error);
+      // Show error toast or notification here if needed
     },
   });
 
@@ -123,18 +137,28 @@ export const ChatWindow = ({ conversationId, conversationName, onBack }: ChatWin
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="text-xs">
-                {displayName.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div>
+            <div className="relative">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="text-xs">
+                  {displayName.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              {/* Online indicator */}
+              <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 border-2 border-background rounded-full"></div>
+            </div>
+            <div className="flex-1">
               <CardTitle className="text-sm">{displayName}</CardTitle>
-              {conversationDetails?.participants && (
-                <p className="text-xs text-muted-foreground">
-                  {conversationDetails.participants.length} member{conversationDetails.participants.length !== 1 ? 's' : ''}
-                </p>
-              )}
+              <div className="flex items-center gap-2">
+                {conversationDetails?.participants && (
+                  <p className="text-xs text-muted-foreground">
+                    {conversationDetails.participants.length} member{conversationDetails.participants.length !== 1 ? 's' : ''}
+                  </p>
+                )}
+                <div className="flex items-center gap-1">
+                  <div className="h-1 w-1 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs text-green-600">Online</span>
+                </div>
+              </div>
             </div>
           </div>
         </CardHeader>

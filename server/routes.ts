@@ -105,25 +105,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/signin", async (req, res) => {
     try {
       const { email, password } = req.body;
-      console.log('Sign-in attempt:', { email, password });
+      console.log('Sign-in attempt for:', email);
 
+      // Validate input
       if (!email || !password) {
+        console.log('Missing credentials');
         return res.status(400).json({ error: 'Email and password are required' });
       }
 
-      const user = await storage.getUserByEmail(email);
+      if (typeof email !== 'string' || typeof password !== 'string') {
+        console.log('Invalid credential types');
+        return res.status(400).json({ error: 'Invalid credential format' });
+      }
 
-      console.log('User found:', user ? 'yes' : 'no');
+      // Find user by email
+      const user = await storage.getUserByEmail(email.trim());
+      console.log('User lookup result:', user ? `Found user ${user.id}` : 'User not found');
 
       if (!user) {
+        console.log('User not found for email:', email);
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
-      const isValid = await storage.verifyPassword(password, user.password);
-      console.log('Password valid:', isValid);
+      // Verify password
+      const isValid = await storage.verifyPassword(password.trim(), user.password);
+      console.log('Password verification:', isValid ? 'SUCCESS' : 'FAILED');
 
       if (!isValid) {
+        console.log('Invalid password for user:', email);
         return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      // Get user profile
+      const profile = await storage.getProfileByUserId(user.id);
+      console.log('Profile lookup:', profile ? `Found profile ${profile.id}` : 'Profile not found');
+
+      if (!profile) {
+        console.error('Profile not found for user:', user.id);
+        return res.status(500).json({ error: 'User profile not found' });
       }
 
       // Generate JWT token
@@ -133,21 +152,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { expiresIn: '7d' }
       );
 
-      const profile = await storage.getProfileByUserId(user.id);
-      
-      console.log("Login successful for:", email);
+      console.log("Sign-in successful for:", email, "User ID:", user.id);
 
-      res.json({ 
+      // Send response
+      const response = { 
         user: { 
           id: user.id, 
           email: user.email 
         },
-        profile,
+        profile: {
+          id: profile.id,
+          userId: profile.userId,
+          username: profile.username,
+          fullName: profile.fullName,
+          avatarUrl: profile.avatarUrl,
+          status: profile.status,
+          lastSeen: profile.lastSeen,
+          createdAt: profile.createdAt,
+          updatedAt: profile.updatedAt
+        },
         token
-      });
+      };
+
+      res.json(response);
     } catch (error) {
-      console.error("Signin error:", error);
-      res.status(500).json({ error: "Internal server error" });
+      console.error("Signin error details:", error);
+      res.status(500).json({ error: "Internal server error during sign in" });
     }
   });
 
