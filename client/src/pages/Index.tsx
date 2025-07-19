@@ -17,7 +17,11 @@ const Index = () => {
     );
   }
 
-  return user ? <ChatLayout /> : <AuthForm />;
+  if (user) {
+    return <ChatLayout />;
+  }
+
+  return <AuthForm />;
 };
 
 export default Index;
