@@ -137,10 +137,15 @@ export const ChatWindow = ({ conversationId, conversationName, onBack }: ChatWin
   const handleHeaderAvatarClick = () => {
     if (conversationDetails?.participants) {
       const otherParticipant = conversationDetails.participants.find((p: any) => p.userId !== user?.id);
-      if (otherParticipant?.profile) {
+      if (otherParticipant?.userId) {
         setSelectedProfile({
           user: { id: otherParticipant.userId, email: '' },
-          profile: otherParticipant.profile
+          profile: otherParticipant.profile || {
+            id: '',
+            username: 'unknown',
+            fullName: 'Unknown User',
+            createdAt: new Date().toISOString()
+          }
         });
       }
     }
@@ -255,11 +260,9 @@ export const ChatWindow = ({ conversationId, conversationName, onBack }: ChatWin
       {/* Profile Dialog */}
       {selectedProfile && (
         <UserProfileDialog
-          isOpen={!!selectedProfile}
+          userId={selectedProfile.user.id.toString()}
+          open={!!selectedProfile}
           onOpenChange={(open) => !open && setSelectedProfile(null)}
-          user={selectedProfile.user}
-          profile={selectedProfile.profile}
-          currentUserId={user?.id}
         />
       )}
     </div>

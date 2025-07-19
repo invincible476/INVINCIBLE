@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/utils';
 
@@ -80,10 +79,10 @@ export const useAuth = () => {
   const signInMutation = useMutation({
     mutationFn: async (credentials: SignInData): Promise<{ user: User; profile: Profile; token: string }> => {
       console.log('Attempting sign in for:', credentials.email);
-      
+
       // Clear any existing token first
       localStorage.removeItem('authToken');
-      
+
       const response = await fetch('/api/auth/signin', {
         method: 'POST',
         headers: { 
@@ -101,22 +100,25 @@ export const useAuth = () => {
         let errorMessage = 'Sign in failed';
         try {
           const errorData = await response.json();
-          errorMessage = errorData.error || `HTTP ${response.status}`;
-          console.error('Sign in error response:', errorData);
+          errorMessage = errorData.error || errorMessage;
         } catch (e) {
-          console.error('Error parsing error response:', e);
-          errorMessage = `Sign in failed (${response.status})`;
+          // If we can't parse the error response, use default message
+          if (response.status === 401) {
+            errorMessage = 'Invalid email or password';
+          } else if (response.status === 500) {
+            errorMessage = 'Server error. Please try again.';
+          }
         }
         throw new Error(errorMessage);
       }
 
       const data = await response.json();
       console.log('Sign in successful:', data);
-      
+
       if (!data.token || !data.user || !data.profile) {
         throw new Error('Invalid response from server');
       }
-      
+
       return data;
     },
     onSuccess: (data) => {

@@ -229,6 +229,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+   // Get user profile by ID
+   app.get('/api/users/:userId/profile', requireAuth, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const parsedUserId = parseInt(userId);
+
+      if (isNaN(parsedUserId)) {
+        return res.status(400).json({ error: 'Invalid user ID' });
+      }
+
+      const user = await storage.getUserById(parsedUserId);
+        
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const profile = await storage.getProfileByUserId(parsedUserId);
+
+      res.json({ 
+        user: {
+          id: user.id,
+          email: user.email
+        },
+        profile: profile || null
+      });
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      res.status(500).json({ error: 'Failed to fetch user profile' });
+    }
+  });
+
   app.put("/api/profile", requireAuth, async (req, res) => {
     try {
       const updateData = insertProfileSchema.partial().parse(req.body);
@@ -244,7 +275,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/conversations", requireAuth, async (req, res) => {
     try {
       const conversations = await storage.getConversationsByUserId(req.userId!);
-      res.json(conversations);
+      
+      const conversationsWithDetails = await Promise.all(
+        conversations.map(async (conv) => {
+          // Get participants with profiles
+          const participantData = await storage.getConversationParticipants(conv.id)
+          
+          // Get last message with sender profile
+          const lastMessage = await storage.getLastMessageWithSenderProfile(conv.id);
+
+          return {
+            ...conv,
+            participants: participantData,
+            lastMessage: lastMessage || null
+          };
+        })
+      );
+
+      res.json(conversationsWithDetails);
     } catch (error) {
       console.error("Get conversations error:", error);
       res.status(500).json({ error: "Internal server error" });

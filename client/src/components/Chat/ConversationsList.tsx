@@ -152,7 +152,15 @@ export const ConversationsList = ({ onSelectConversation, selectedConversationId
                     onClick={() => onSelectConversation(conversation.id, name)}
                   >
                     <div className="flex items-start gap-3 w-full">
-                      <Avatar className="h-8 w-8 mt-1 relative cursor-pointer" onClick={() => {if(otherParticipant?.userId) openProfileDialog(otherParticipant?.userId)}}>
+                      <Avatar 
+                        className="h-8 w-8 mt-1 relative cursor-pointer" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if(otherParticipant?.userId) {
+                            openProfileDialog(otherParticipant.userId.toString());
+                          }
+                        }}
+                      >
                         {typeof getConversationAvatar(conversation) === 'string' ? (
                           <AvatarFallback className="text-xs">
                             {getConversationAvatar(conversation)}
@@ -204,7 +212,11 @@ export const ConversationsList = ({ onSelectConversation, selectedConversationId
           )}
         </ScrollArea>
       </CardContent>
-      <UserProfileDialog userId={selectedProfileId} open={isProfileDialogOpen} onOpenChange={closeProfileDialog} />
+      <UserProfileDialog 
+        userId={selectedProfileId} 
+        open={isProfileDialogOpen} 
+        onOpenChange={setIsProfileDialogOpen} 
+      />
     </Card>
   );
 };
